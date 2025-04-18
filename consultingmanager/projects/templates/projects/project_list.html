@@ -1,0 +1,110 @@
+{% extends "projects/base.html" %}
+
+{% block projects_title %}Projects{% endblock %}
+
+{% block projects_content %}
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">All Projects</h5>
+            <a href="{% url 'projects:project-create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Project
+            </a>
+        </div>
+
+        <!-- Search and Filter Form -->
+        <form method="get" class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search projects..." 
+                           value="{{ request.GET.search|default:'' }}">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="NOT_STARTED" {% if request.GET.status == 'NOT_STARTED' %}selected{% endif %}>Not Started</option>
+                    <option value="IN_PROGRESS" {% if request.GET.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                    <option value="ON_HOLD" {% if request.GET.status == 'ON_HOLD' %}selected{% endif %}>On Hold</option>
+                    <option value="COMPLETED" {% if request.GET.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+            {% if request.GET.search or request.GET.status %}
+            <div class="col-md-2">
+                <a href="{% url 'projects:project-list' %}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+            {% endif %}
+        </form>
+        
+        {% if projects %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Client</th>
+                            <th>Status</th>
+                            <th>Start Date</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'projects:project-detail' project.pk %}" class="text-decoration-none">
+                                        {{ project.title }}
+                                    </a>
+                                </td>
+                                <td>{{ project.client.name }}</td>
+                                <td>
+                                    {% if project.status == 'NOT_STARTED' %}
+                                        <span class="badge bg-secondary">Not Started</span>
+                                    {% elif project.status == 'IN_PROGRESS' %}
+                                        <span class="badge bg-primary">In Progress</span>
+                                    {% elif project.status == 'ON_HOLD' %}
+                                        <span class="badge bg-warning">On Hold</span>
+                                    {% elif project.status == 'COMPLETED' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ project.start_date|date:"M d, Y" }}</td>
+                                <td>{{ project.due_date|date:"M d, Y" }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'projects:project-detail' project.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'projects:project-update' project.pk %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'projects:project-delete' project.pk %}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <p class="text-muted mb-0">
+                    {% if request.GET.search or request.GET.status %}
+                        No projects found matching your criteria.
+                    {% else %}
+                        No projects added yet.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

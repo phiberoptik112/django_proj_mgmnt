@@ -1,0 +1,59 @@
+{% extends "files/base.html" %}
+
+{% block files_title %}Files{% endblock %}
+
+{% block files_content %}
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">All Files</h5>
+            <a href="{% url 'files:file_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New File
+            </a>
+        </div>
+        
+        {% if files %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Size</th>
+                            <th>Uploaded</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                            <tr>
+                                <td>{{ file.name }}</td>
+                                <td>{{ file.file_type }}</td>
+                                <td>{{ file.file_size }}</td>
+                                <td>{{ file.uploaded_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ file.file.url }}" class="btn btn-sm btn-info" target="_blank">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <a href="{% url 'files:file_update' file.pk %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'files:file_delete' file.pk %}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <p class="text-muted mb-0">No files uploaded yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

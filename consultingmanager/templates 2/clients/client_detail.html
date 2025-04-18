@@ -1,0 +1,77 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ client.name }} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{{ client.name }}</h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'clients:client_update' client.pk %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        <a href="{% url 'clients:client_delete' client.pk %}" class="btn btn-danger">
+            <i class="fas fa-trash"></i> Delete
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Client Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Company</dt>
+                    <dd class="col-sm-8">{{ client.company }}</dd>
+
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8">{{ client.email }}</dd>
+
+                    <dt class="col-sm-4">Phone</dt>
+                    <dd class="col-sm-8">{{ client.phone }}</dd>
+
+                    <dt class="col-sm-4">Address</dt>
+                    <dd class="col-sm-8">{{ client.address }}</dd>
+
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">{{ client.created_at|date:"F j, Y" }}</dd>
+
+                    <dt class="col-sm-4">Last Updated</dt>
+                    <dd class="col-sm-8">{{ client.updated_at|date:"F j, Y" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Projects</h5>
+                <a href="{% url 'projects:project_create' %}?client={{ client.pk }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Add Project
+                </a>
+            </div>
+            <div class="card-body">
+                {% if client.projects.all %}
+                    <div class="list-group">
+                        {% for project in client.projects.all %}
+                            <a href="{% url 'projects:project_detail' project.pk %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ project.title }}</h6>
+                                    <small class="text-muted">{{ project.status }}</small>
+                                </div>
+                                <p class="mb-1">{{ project.description|truncatewords:30 }}</p>
+                                <small>Started: {{ project.start_date|date:"F j, Y" }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No projects found for this client.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

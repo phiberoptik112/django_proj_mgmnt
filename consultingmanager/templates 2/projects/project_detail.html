@@ -1,0 +1,147 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ project.title }} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{{ project.title }}</h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'projects:project_update' project.pk %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        <a href="{% url 'projects:project_delete' project.pk %}" class="btn btn-danger">
+            <i class="fas fa-trash"></i> Delete
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Project Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Client</dt>
+                    <dd class="col-sm-8">
+                        <a href="{% url 'clients:client_detail' project.client.pk %}">{{ project.client.name }}</a>
+                    </dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge {% if project.status == 'completed' %}bg-success
+                                         {% elif project.status == 'in_progress' %}bg-primary
+                                         {% elif project.status == 'planning' %}bg-info
+                                         {% elif project.status == 'on_hold' %}bg-warning
+                                         {% else %}bg-danger{% endif %}">
+                            {{ project.get_status_display }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4">Start Date</dt>
+                    <dd class="col-sm-8">{{ project.start_date|date:"F j, Y" }}</dd>
+
+                    <dt class="col-sm-4">End Date</dt>
+                    <dd class="col-sm-8">{{ project.end_date|date:"F j, Y"|default:"Not set" }}</dd>
+
+                    <dt class="col-sm-4">Budget</dt>
+                    <dd class="col-sm-8">${{ project.budget|default:"0.00" }}</dd>
+
+                    <dt class="col-sm-4">Description</dt>
+                    <dd class="col-sm-8">{{ project.description }}</dd>
+
+                    <dt class="col-sm-4">Created</dt>
+                    <dd class="col-sm-8">{{ project.created_at|date:"F j, Y" }}</dd>
+
+                    <dt class="col-sm-4">Last Updated</dt>
+                    <dd class="col-sm-8">{{ project.updated_at|date:"F j, Y" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Files</h5>
+                <a href="{% url 'files:file_create' %}?project={{ project.pk }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Add File
+                </a>
+            </div>
+            <div class="card-body">
+                {% if project.files.all %}
+                    <div class="list-group">
+                        {% for file in project.files.all %}
+                            <a href="{% url 'files:file_detail' file.pk %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ file.title }}</h6>
+                                    <small class="text-muted">{{ file.get_file_type_display }}</small>
+                                </div>
+                                <p class="mb-1">{{ file.description|truncatewords:20 }}</p>
+                                <small>Uploaded: {{ file.uploaded_at|date:"F j, Y" }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No files found for this project.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Tests</h5>
+                <a href="{% url 'tests:test_create' %}?project={{ project.pk }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Add Test
+                </a>
+            </div>
+            <div class="card-body">
+                {% if project.tests.all %}
+                    <div class="list-group">
+                        {% for test in project.tests.all %}
+                            <a href="{% url 'tests:test_detail' test.pk %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ test.title }}</h6>
+                                    <small class="text-muted">{{ test.get_test_type_display }}</small>
+                                </div>
+                                <p class="mb-1">{{ test.description|truncatewords:20 }}</p>
+                                <small>Status: {{ test.get_status_display }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No tests found for this project.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Communications</h5>
+                <a href="{% url 'communications:communication_create' %}?project={{ project.pk }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Add Communication
+                </a>
+            </div>
+            <div class="card-body">
+                {% if project.communications.all %}
+                    <div class="list-group">
+                        {% for comm in project.communications.all %}
+                            <a href="{% url 'communications:communication_detail' comm.pk %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ comm.subject }}</h6>
+                                    <small class="text-muted">{{ comm.get_communication_type_display }}</small>
+                                </div>
+                                <p class="mb-1">{{ comm.content|truncatewords:20 }}</p>
+                                <small>Date: {{ comm.date|date:"F j, Y" }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No communications found for this project.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
