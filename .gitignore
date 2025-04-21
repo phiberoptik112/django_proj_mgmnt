@@ -2,6 +2,7 @@
 env/
 venv/
 ENV/
+new_env/
 
 # Python bytecode
 __pycache__/

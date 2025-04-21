@@ -23,6 +23,11 @@ from django.views.generic import RedirectView, TemplateView
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 
+# Customize admin site
+admin.site.site_header = "Consulting Manager Administration"
+admin.site.site_title = "Consulting Manager Admin Portal"
+admin.site.index_title = "Welcome to Consulting Manager Admin"
+
 urlpatterns = [
     path('', RedirectView.as_view(pattern_name='clients:client-list'), name='home'),
     path('admin/', admin.site.urls),

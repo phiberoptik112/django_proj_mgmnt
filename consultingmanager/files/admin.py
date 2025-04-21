@@ -1,12 +1,6 @@
 from django.contrib import admin
-from .models import Project, ProjectFolder, FileMetadata, ProjectAnalysis, File
-
-@admin.register(Project)
-class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('project_code', 'name', 'year', 'created_at')
-    list_filter = ('year',)
-    search_fields = ('project_code', 'name')
-    ordering = ('-year', 'project_code')
+from .models import ProjectFolder, FileMetadata, ProjectAnalysis, File
+from projects.models import Project
 
 @admin.register(ProjectFolder)
 class ProjectFolderAdmin(admin.ModelAdmin):

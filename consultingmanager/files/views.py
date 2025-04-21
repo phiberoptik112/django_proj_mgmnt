@@ -18,7 +18,7 @@ class FileCreateView(LoginRequiredMixin, CreateView):
     model = File
     form_class = FileForm
     template_name = 'files/file_form.html'
-    success_url = reverse_lazy('file-list')
+    success_url = reverse_lazy('files:file-list')
 
     def form_valid(self, form):
         messages.success(self.request, 'File uploaded successfully.')
@@ -28,7 +28,7 @@ class FileUpdateView(LoginRequiredMixin, UpdateView):
     model = File
     form_class = FileForm
     template_name = 'files/file_form.html'
-    success_url = reverse_lazy('file-list')
+    success_url = reverse_lazy('files:file-list')
 
     def form_valid(self, form):
         messages.success(self.request, 'File updated successfully.')
@@ -37,7 +37,7 @@ class FileUpdateView(LoginRequiredMixin, UpdateView):
 class FileDeleteView(LoginRequiredMixin, DeleteView):
     model = File
     template_name = 'files/file_confirm_delete.html'
-    success_url = reverse_lazy('file-list')
+    success_url = reverse_lazy('files:file-list')
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'File deleted successfully.')
