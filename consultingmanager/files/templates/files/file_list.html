@@ -3,57 +3,111 @@
 {% block files_title %}Files{% endblock %}
 
 {% block files_content %}
-<div class="card">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">All Files</h5>
-            <a href="{% url 'files:file_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New File
-            </a>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">All Files</h5>
+                    <a href="{% url 'files:file-create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New File
+                    </a>
+                </div>
+                
+                {% if files %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Uploaded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                    <tr>
+                                        <td>{{ file.name }}</td>
+                                        <td>{{ file.file_type }}</td>
+                                        <td>{{ file.file_size }}</td>
+                                        <td>{{ file.uploaded_at|date:"M d, Y" }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{{ file.file.url }}" class="btn btn-sm btn-info" target="_blank">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                <a href="{% url 'files:file-update' file.pk %}" class="btn btn-sm btn-warning">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'files:file-delete' file.pk %}" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-0">No files uploaded yet.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
-        
-        {% if files %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Size</th>
-                            <th>Uploaded</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for file in files %}
-                            <tr>
-                                <td>{{ file.name }}</td>
-                                <td>{{ file.file_type }}</td>
-                                <td>{{ file.file_size }}</td>
-                                <td>{{ file.uploaded_at|date:"M d, Y" }}</td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a href="{{ file.file.url }}" class="btn btn-sm btn-info" target="_blank">
-                                            <i class="fas fa-download"></i>
-                                        </a>
-                                        <a href="{% url 'files:file_update' file.pk %}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="{% url 'files:file_delete' file.pk %}" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Project Metadata</h5>
+                    <a href="{% url 'files:metadata-create' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Add Project
+                    </a>
+                </div>
+
+                {% if metadata_list %}
+                    <div class="list-group">
+                        {% for metadata in metadata_list %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">{{ metadata.project.title }}</h6>
+                                    <span class="badge {% if metadata.status == 'completed' %}bg-success
+                                                      {% elif metadata.status == 'in_progress' %}bg-primary
+                                                      {% elif metadata.status == 'failed' %}bg-danger
+                                                      {% else %}bg-secondary{% endif %}">
+                                        {{ metadata.get_status_display }}
+                                    </span>
+                                </div>
+                                <p class="mb-1 text-muted small">{{ metadata.project_path }}</p>
+                                {% if metadata.last_analyzed %}
+                                    <small>Last analyzed: {{ metadata.last_analyzed|date:"M d, Y H:i" }}</small>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <a href="{% url 'files:metadata-detail' metadata.pk %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <a href="{% url 'files:metadata-update' metadata.pk %}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{% url 'files:metadata-analyze' metadata.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-sync"></i> Analyze
+                                    </a>
+                                </div>
+                            </div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-0">No project metadata added yet.</p>
+                    </div>
+                {% endif %}
             </div>
-        {% else %}
-            <div class="text-center py-4">
-                <p class="text-muted mb-0">No files uploaded yet.</p>
-            </div>
-        {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %} 

@@ -1,10 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import File
-from .forms import FileForm
+from django.http import JsonResponse
+from .models import File, ProjectMetadata
+from .forms import FileForm, ProjectMetadataForm
+from .tasks import analyze_project_metadata
 
 # Create your views here.
 
@@ -13,6 +16,11 @@ class FileListView(LoginRequiredMixin, ListView):
     template_name = 'files/file_list.html'
     context_object_name = 'files'
     ordering = ['-uploaded_at']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['metadata_list'] = ProjectMetadata.objects.all().select_related('project')
+        return context
 
 class FileCreateView(LoginRequiredMixin, CreateView):
     model = File
@@ -42,3 +50,56 @@ class FileDeleteView(LoginRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'File deleted successfully.')
         return super().delete(request, *args, **kwargs)
+
+class ProjectMetadataCreateView(LoginRequiredMixin, CreateView):
+    model = ProjectMetadata
+    form_class = ProjectMetadataForm
+    template_name = 'files/metadata_form.html'
+    success_url = reverse_lazy('files:file-list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if form.cleaned_data.get('analyze_now'):
+            try:
+                analyze_project_metadata(self.object.id)
+                messages.success(self.request, 'Project metadata created and analysis started.')
+            except Exception as e:
+                messages.error(self.request, f'Error during analysis: {str(e)}')
+        else:
+            messages.success(self.request, 'Project metadata created successfully.')
+        return response
+
+class ProjectMetadataUpdateView(LoginRequiredMixin, UpdateView):
+    model = ProjectMetadata
+    form_class = ProjectMetadataForm
+    template_name = 'files/metadata_form.html'
+    success_url = reverse_lazy('files:file-list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if form.cleaned_data.get('analyze_now'):
+            try:
+                analyze_project_metadata(self.object.id)
+                messages.success(self.request, 'Project metadata updated and analysis started.')
+            except Exception as e:
+                messages.error(self.request, f'Error during analysis: {str(e)}')
+        else:
+            messages.success(self.request, 'Project metadata updated successfully.')
+        return response
+
+@login_required
+def analyze_metadata(request, pk):
+    """Trigger analysis for a specific project metadata"""
+    metadata = get_object_or_404(ProjectMetadata, pk=pk)
+    try:
+        analyze_project_metadata(metadata.id)
+        messages.success(request, 'Analysis completed successfully.')
+    except Exception as e:
+        messages.error(request, f'Error during analysis: {str(e)}')
+    return redirect('files:file-list')
+
+@login_required
+def metadata_detail(request, pk):
+    """View project metadata details"""
+    metadata = get_object_or_404(ProjectMetadata, pk=pk)
+    return render(request, 'files/metadata_detail.html', {'metadata': metadata})

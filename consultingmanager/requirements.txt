@@ -1,0 +1,8 @@
+django>=5.2
+pandas>=2.0.0
+matplotlib>=3.7.0
+networkx>=3.0
+pdfplumber>=0.10.0
+python-docx>=0.8.11
+extract-msg>=0.41.0
+django-crispy-forms>=2.0 

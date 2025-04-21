@@ -3,7 +3,6 @@ import pandas as pd
 import re
 from typing import List, Dict
 from pathlib import Path
-from projfolder_to_dataclass_conv import create_project_db, compare_project_dbs
 import pdfplumber
 from docx import Document
 from datetime import datetime
@@ -22,12 +21,10 @@ def extract_text_from_file(file_path: str) -> str:
                 return f.read()
         elif extension == '.pdf':
             # Requires pdfplumber package
-
             with pdfplumber.open(file_path) as pdf:
                 return ' '.join(page.extract_text() for page in pdf.pages)
         elif extension in ['.doc', '.docx']:
             # Requires python-docx package
-
             doc = Document(file_path)
             return ' '.join(paragraph.text for paragraph in doc.paragraphs)
         else:
@@ -105,25 +102,20 @@ def analyze_proposals(project_paths: List[str]) -> pd.DataFrame:
     """
     all_findings = []
     
-    # Generate databases for each project
     for path in project_paths:
-        project_db = create_project_db(path)
-        
-        # Iterate through each folder's DataFrame in the project
-        for folder_name, df in project_db.items():
-            # Filter for proposal files
-            proposal_files = df[df['filename'].str.lower().str.contains('proposal')]
-            
-            for _, row in proposal_files.iterrows():
-                file_path = row['path']
-                text_content = extract_text_from_file(file_path)
-                
-                if text_content:
-                    findings = find_dollar_amounts(text_content)
-                    for finding in findings:
-                        finding['source_file'] = row['filename']
-                        finding['project_path'] = row['path']
-                        all_findings.append(finding)
+        # Walk through project directory
+        for root, _, files in os.walk(path):
+            for file in files:
+                if 'proposal' in file.lower():
+                    file_path = os.path.join(root, file)
+                    text_content = extract_text_from_file(file_path)
+                    
+                    if text_content:
+                        findings = find_dollar_amounts(text_content)
+                        for finding in findings:
+                            finding['source_file'] = file
+                            finding['project_path'] = path
+                            all_findings.append(finding)
     
     # Create DataFrame from findings
     if all_findings:
@@ -181,15 +173,8 @@ def analyze_scope_of_work(project_paths: List[str]) -> pd.DataFrame:
     all_scopes = []
     
     for project_path in project_paths:
-        # Get business folder path
-        business_path = os.path.join(project_path, 'Business')
-        
-        if not os.path.exists(business_path):
-            print(f"Warning: Business folder not found in {project_path}")
-            continue
-            
-        # Find proposal documents in business folder
-        for root, _, files in os.walk(business_path):
+        # Walk through project directory
+        for root, _, files in os.walk(project_path):
             for filename in files:
                 if filename.lower().endswith(('.doc', '.docx', '.pdf')):
                     file_path = os.path.join(root, filename)
@@ -310,7 +295,6 @@ def create_project_file_list(project_path: str | list[str], output_file: str = N
             
             f.write("\n")
     
-    print(f"File listing saved to {output_file}")
     return folder_structure
 
 def plot_folder_tree(project_path: str | list[str], folder_structure: dict = None):
@@ -448,12 +432,9 @@ def plot_folder_tree(project_path: str | list[str], folder_structure: dict = Non
     # Add title
     plt.title(f"Folder Structure for {project_name}", fontsize=16)
     
-    # Show the plot
-    plt.tight_layout()
+    # Save the plot
     plt.savefig(f"{project_name}_folder_tree.png", dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    return G
+    plt.close()
 
 
 

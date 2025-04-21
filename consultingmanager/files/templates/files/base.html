@@ -5,11 +5,11 @@
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>{% block files_title %}{% endblock %}</h1>
+        <h1>{{ self.files_title }}</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{% block files_title %}{% endblock %}</li>
+                <li class="breadcrumb-item active" aria-current="page">{{ self.files_title }}</li>
             </ol>
         </nav>
     </div>

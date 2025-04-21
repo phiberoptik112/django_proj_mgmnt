@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from pathlib import Path
+import json
 
 # Create your models here.
 
@@ -88,3 +89,44 @@ class ProjectAnalysis(models.Model):
         
     def __str__(self):
         return f"{self.project.project_code} - {self.analysis_type}"
+
+class ProjectMetadata(models.Model):
+    ANALYSIS_STATUS = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='metadata')
+    project_path = models.CharField(max_length=500, help_text="Full path to the project directory")
+    last_analyzed = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=ANALYSIS_STATUS, default='pending')
+    file_structure = models.JSONField(null=True, blank=True, help_text="JSON representation of project file structure")
+    email_summary = models.TextField(blank=True, help_text="Summary of processed email content")
+    dollar_amounts = models.JSONField(null=True, blank=True, help_text="Extracted dollar amounts from proposals")
+    scope_analysis = models.JSONField(null=True, blank=True, help_text="Analysis of scope of work")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Metadata for {self.project.title}"
+
+    def save_file_structure(self, structure_dict):
+        """Save file structure as JSON"""
+        self.file_structure = json.dumps(structure_dict)
+        self.save()
+
+    def save_dollar_amounts(self, amounts_df):
+        """Save dollar amounts DataFrame as JSON"""
+        self.dollar_amounts = amounts_df.to_json()
+        self.save()
+
+    def save_scope_analysis(self, scope_df):
+        """Save scope analysis DataFrame as JSON"""
+        self.scope_analysis = scope_df.to_json()
+        self.save()
+
+    class Meta:
+        verbose_name_plural = "Project Metadata"
+        ordering = ['-updated_at']
