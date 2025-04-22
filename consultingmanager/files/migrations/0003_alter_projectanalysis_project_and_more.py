@@ -2,13 +2,58 @@
 
 import django.db.models.deletion
 from django.db import migrations, models
+from django.utils import timezone
 
+def create_default_project(apps, schema_editor):
+    Project = apps.get_model('projects', 'Project')
+    Client = apps.get_model('clients', 'Client')
+    if not Project.objects.filter(id=1).exists():
+        # Get or create a default client
+        client, _ = Client.objects.get_or_create(
+            name="Default Client",
+            defaults={
+                'email': 'default@example.com',
+                'phone': '000-000-0000'
+            }
+        )
+        now = timezone.now()
+        Project.objects.create(
+            id=1,
+            title="Default Project",
+            description="Default project created during migration recovery",
+            start_date=now.date(),
+            status='planning',
+            client=client,
+            created_at=now,
+            updated_at=now
+        )
+
+def forward_null_projects(apps, schema_editor):
+    FileMetadata = apps.get_model('files', 'FileMetadata')
+    ProjectFolder = apps.get_model('files', 'ProjectFolder')
+    ProjectAnalysis = apps.get_model('files', 'ProjectAnalysis')
+    
+    FileMetadata.objects.all().update(project=None)
+    ProjectFolder.objects.all().update(project=None)
+    ProjectAnalysis.objects.all().update(project=None)
+
+def update_project_references(apps, schema_editor):
+    FileMetadata = apps.get_model('files', 'FileMetadata')
+    ProjectFolder = apps.get_model('files', 'ProjectFolder')
+    ProjectAnalysis = apps.get_model('files', 'ProjectAnalysis')
+    Project = apps.get_model('projects', 'Project')
+    
+    default_project = Project.objects.get(id=1)
+    FileMetadata.objects.all().update(project=default_project)
+    ProjectFolder.objects.all().update(project=default_project)
+    ProjectAnalysis.objects.all().update(project=default_project)
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ("files", "0002_project_projectfolder_projectanalysis_filemetadata"),
         ("projects", "0001_initial"),
+        ("clients", "0001_initial"),
     ]
 
     operations = [
@@ -16,6 +61,7 @@ class Migration(migrations.Migration):
             model_name="projectanalysis",
             name="project",
             field=models.ForeignKey(
+                null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="analyses",
                 to="projects.project",
@@ -25,6 +71,7 @@ class Migration(migrations.Migration):
             model_name="projectfolder",
             name="project",
             field=models.ForeignKey(
+                null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="folders",
                 to="projects.project",
@@ -34,11 +81,15 @@ class Migration(migrations.Migration):
             model_name="filemetadata",
             name="project",
             field=models.ForeignKey(
+                null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name="file_metadata",
+                related_name="files",
                 to="projects.project",
             ),
         ),
+        migrations.RunPython(forward_null_projects),
+        migrations.RunPython(create_default_project),
+        migrations.RunPython(update_project_references),
         migrations.CreateModel(
             name="ProjectMetadata",
             fields=[
