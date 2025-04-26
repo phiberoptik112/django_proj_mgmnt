@@ -6,8 +6,9 @@ from pathlib import Path
 import pdfplumber
 from docx import Document
 from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')  # Set the backend to non-interactive Agg
 import matplotlib.pyplot as plt
-import networkx as nx
 from matplotlib.cm import get_cmap
 
 
@@ -305,6 +306,9 @@ def plot_folder_tree(project_path: str | list[str], folder_structure: dict = Non
         project_path: Path to the project directory or list of project paths
         folder_structure: Dictionary with folder structure and file counts (if None, will be generated)
     """
+    # Import networkx here to avoid loading it during Django startup
+    import networkx as nx
+    
     # Handle both single path and list of paths
     if isinstance(project_path, list):
         # Create a combined graph for all projects

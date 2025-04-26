@@ -1,12 +1,6 @@
 import os
 from datetime import datetime
 from .models import ProjectMetadata
-from .utils.quick_project_analysis import (
-    analyze_proposals,
-    analyze_scope_of_work,
-    create_project_file_list,
-    plot_folder_tree
-)
 from .utils.email_processor import process_email_batch
 
 def analyze_project_metadata(metadata_id: int) -> None:
@@ -16,6 +10,14 @@ def analyze_project_metadata(metadata_id: int) -> None:
     Args:
         metadata_id: ID of the ProjectMetadata instance to analyze
     """
+    # Import analysis functions here to avoid loading heavy dependencies during Django startup
+    from .utils.quick_project_analysis import (
+        analyze_proposals,
+        analyze_scope_of_work,
+        create_project_file_list,
+        plot_folder_tree
+    )
+    
     try:
         metadata = ProjectMetadata.objects.get(id=metadata_id)
         metadata.status = 'in_progress'

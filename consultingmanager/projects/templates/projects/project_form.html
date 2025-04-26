@@ -1,0 +1,39 @@
+{% extends "projects/base.html" %}
+
+{% block projects_title %}
+    {% if form.instance.pk %}Edit Project{% else %}New Project{% endif %}
+{% endblock %}
+
+{% block projects_content %}
+    <div class="card">
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% if field.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in field.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'projects:project-list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        {% if form.instance.pk %}Update Project{% else %}Create Project{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %} 
