@@ -1,0 +1,266 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ project.title }} - Consulting Manager{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Project Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>{{ project.title }}</h1>
+            <p class="text-muted">
+                Client: <a href="{% url 'clients:client-detail' project.client.pk %}">{{ project.client.name }}</a>
+                <span class="mx-2">|</span>
+                Status: 
+                <span class="badge {% if project.status == 'completed' %}bg-success
+                                 {% elif project.status == 'in_progress' %}bg-primary
+                                 {% elif project.status == 'planning' %}bg-info
+                                 {% elif project.status == 'on_hold' %}bg-warning
+                                 {% else %}bg-danger{% endif %}">
+                    {{ project.get_status_display }}
+                </span>
+            </p>
+        </div>
+        <div class="btn-group" role="group">
+            <a href="{% url 'projects:project-update' project.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit Project
+            </a>
+            <a href="{% url 'files:metadata-create' %}?project={{ project.pk }}" class="btn btn-primary">
+                <i class="fas fa-sync"></i> Update Metadata
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Project Overview Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Project Overview</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Start Date</dt>
+                        <dd class="col-sm-8">{{ project.start_date|date:"F j, Y" }}</dd>
+
+                        <dt class="col-sm-4">End Date</dt>
+                        <dd class="col-sm-8">{{ project.end_date|date:"F j, Y"|default:"Not set" }}</dd>
+
+                        <dt class="col-sm-4">Budget</dt>
+                        <dd class="col-sm-8">${{ project.budget|default:"0.00" }}</dd>
+
+                        <dt class="col-sm-4">Created</dt>
+                        <dd class="col-sm-8">{{ project.created_at|date:"F j, Y" }}</dd>
+
+                        <dt class="col-sm-4">Updated</dt>
+                        <dd class="col-sm-8">{{ project.updated_at|date:"F j, Y" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Description Card -->
+        <div class="col-md-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Project Description</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ project.description|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Metadata Section -->
+        {% if project.metadata.exists %}
+        {% with metadata=project.metadata.first %}
+        <!-- File Structure Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">File Structure</h5>
+                    <span class="text-muted small">Last analyzed: {{ metadata.last_analyzed|date:"M d, Y H:i" }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="file-tree" style="max-height: 400px; overflow-y: auto;">
+                        {% if metadata.file_structure_pretty %}
+                            <pre class="mb-0" style="white-space: pre; font-family: monospace;">
+                                {{ metadata.file_structure_pretty }}
+                            </pre>
+                        {% else %}
+                            <p class="text-muted">No file structure analysis available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Analysis Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Budget Analysis</h5>
+                </div>
+                <div class="card-body">
+                    {% if metadata.dollar_amounts %}
+                        <canvas id="budgetChart" width="400" height="300"></canvas>
+                    {% else %}
+                        <p class="text-muted">No budget analysis available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Scope Analysis Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Scope Analysis</h5>
+                </div>
+                <div class="card-body">
+                    {% if metadata.scope_analysis %}
+                        <pre class="mb-0"><code>{{ metadata.scope_analysis|pprint }}</code></pre>
+                    {% else %}
+                        <p class="text-muted">No scope analysis available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Communication Summary -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Email Communication Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% if metadata.email_summary %}
+                        <div class="email-summary" style="max-height: 400px; overflow-y: auto;">
+                            {{ metadata.email_summary|linebreaks }}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No email summary available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% else %}
+        <div class="col-12 mb-4">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No metadata analysis available. 
+                <a href="{% url 'files:metadata-create' %}?project={{ project.pk }}" class="alert-link">
+                    Click here to analyze project metadata
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Project Files -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Project Files</h5>
+                    <a href="{% url 'files:file-create' %}?project={{ project.pk }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Add File
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if project.files.all %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                        <th>Uploaded</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in project.files.all %}
+                                        <tr>
+                                            <td>{{ file.title }}</td>
+                                            <td><span class="badge bg-secondary">{{ file.get_file_type_display }}</span></td>
+                                            <td>{{ file.description|truncatewords:20 }}</td>
+                                            <td>{{ file.uploaded_at|date:"M d, Y" }}</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'files:file-detail' file.pk %}" class="btn btn-info">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'files:file-update' file.pk %}" class="btn btn-warning">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'files:file-delete' file.pk %}" class="btn btn-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No files uploaded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+{% if project.metadata.exists %}
+    {{ project.metadata.first.dollar_amounts|json_script:"budget-data" }}
+{% endif %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const budgetChartEl = document.getElementById('budgetChart');
+    if (budgetChartEl) {
+        const budgetData = document.getElementById('budget-data');
+        if (budgetData) {
+            const metadata = JSON.parse(budgetData.textContent);
+            if (metadata) {
+                const ctx = budgetChartEl.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(metadata),
+                        datasets: [{
+                            label: 'Amount ($)',
+                            data: Object.values(metadata),
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+});
+</script>
+{% endblock %} 

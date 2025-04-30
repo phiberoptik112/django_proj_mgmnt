@@ -1,17 +1,19 @@
-File listing for project: /Users/jakepfitsch_home/Library/Mobile Documents/com~apple~CloudDocs/DLAA/24-004_test_projectDir
-Generated on: 2025-04-24 23:41:39
+File listing for project: /Users/jakepfitsch/Documents/Documents - Jake’s iMac/Python_projects/24-004_exampleprojectfolder
+Generated on: 2025-04-29 20:55:46
 --------------------------------------------------------------------------------
 
-📁 24-004_test_projectDir/
+📁 24-004_exampleprojectfolder/
   📄 .DS_Store
 
 📁 Design Files/
+  📄 .DS_Store
 
   📁 EASE/
 
   📁 RA Worksheets/
 
 📁 Drawings/
+  📄 .DS_Store
 
   📁 Current Drawings/
 
@@ -79,6 +81,7 @@ Generated on: 2025-04-24 23:41:39
   📄 2024-05-07_140950_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
 
 📁 CA/
+  📄 .DS_Store
 
   📁 Shop Drawings/
 
@@ -106,6 +109,7 @@ Generated on: 2025-04-24 23:41:39
 📁 Cost Estimates/
 
 📁 Mechanical/
+  📄 .DS_Store
 
   📁 Mechanical Data/
 
@@ -126,12 +130,14 @@ Generated on: 2025-04-24 23:41:39
   📁 Test_Templates/
 
   📁 Specs/
+    📄 .DS_Store
 
     📁 Outgoing/
 
     📁 Incoming/
 
   📁 RawData/
+    📄 .DS_Store
 
     📁 A_Meter/
       📄 831_0002237-20240404 135527-831_Data.028.xlsx
@@ -189,7 +195,6 @@ Generated on: 2025-04-24 23:41:39
   📄 GOBY22-031 Sky Ala Moana A-American Mockup Flooring AIIC Test Results - DLAA.docx
   📄 24-004 Ka'ulu by Gentry Flooring ASTC - AIIC Test Results - DLAA.pdf
   📄 GOBY23-010 DLAA Sky Ala Moana ASTM E336 Testing Results Report.docx
-  📄 ~$TestPlan_Kaulu_ASTM_testingv1.xlsx
   📄 TestSheets_Drawings_scan - MeasCalibraed.pdf
   📄 GOBY21-011D Ironwoods Unit 73 ASTC and AIIC Test Results - DLAA.docx
   📄 GOBY21-011 Ironwoods AOAO Acoustical Analysis Report final.docx
@@ -203,7 +208,6 @@ Generated on: 2025-04-24 23:41:39
     📄 24-004 ASTC-AIIC-NIC Test Report_1.1.1_.xlsx
     📄 24-004 ASTC-AIIC-NIC Test Report_1.3.1_.xlsx
     📄 24-004 ASTC-AIIC-NIC Test Report_1.2.1_.xlsx
-    📄 ~$24-004 ASTC-AIIC-NIC Test Report_1.1.1_.xlsx
 
   📁 Specifications/
 
@@ -214,6 +218,7 @@ Generated on: 2025-04-24 23:41:39
   📁 manual_exportPDF/
     📄 24-004 AIIC Test Report_1.4.1_.pdf
     📄 24-004_All_ASTC_AIIC_Reports_v2.pdf
+    📄 .DS_Store
     📄 24-004 ASTC-AIIC-NIC Test Report_1.4.1_.xlsx
     📄 24-004 AIIC Test Report_1.2.1_.pdf
     📄 24-004 ASTC Test Report_1.3.1_.pdf
@@ -226,7 +231,6 @@ Generated on: 2025-04-24 23:41:39
     📄 24-004 AIIC Test Report_1.3.1_.pdf
     📄 24-004 ASTC-AIIC-NIC Test Report_1.3.1_.xlsx
     📄 24-004 ASTC-AIIC-NIC Test Report_1.2.1_.xlsx
-    📄 ~$24-004 ASTC-AIIC-NIC Test Report_1.1.1_.xlsx
     📄 24-004 AIIC test Report_1.1.1_.pdf
 
     📁 original_bak/

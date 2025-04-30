@@ -10,28 +10,56 @@ import matplotlib
 matplotlib.use('Agg')  # Set the backend to non-interactive Agg
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
+import warnings
+import logging
+import networkx as nx
 
+# Configure logging with more detailed format
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+# Suppress pdfplumber warnings about CropBox
+warnings.filterwarnings('ignore', message='CropBox missing from /Page, defaulting to MediaBox')
 
 def extract_text_from_file(file_path: str) -> str:
     """Extract text content from various file types"""
+    logger.debug(f"Attempting to extract text from file: {file_path}")
     extension = Path(file_path).suffix.lower()
+    logger.debug(f"File extension detected: {extension}")
     
     try:
         if extension == '.txt':
+            logger.debug("Processing text file")
             with open(file_path, 'r', encoding='utf-8') as f:
                 return f.read()
         elif extension == '.pdf':
-            # Requires pdfplumber package
+            logger.debug("Processing PDF file")
             with pdfplumber.open(file_path) as pdf:
-                return ' '.join(page.extract_text() for page in pdf.pages)
+                logger.debug(f"PDF opened successfully. Total pages: {len(pdf.pages)}")
+                text = []
+                for i, page in enumerate(pdf.pages, 1):
+                    try:
+                        page_text = page.extract_text() or ''
+                        text.append(page_text)
+                        logger.debug(f"Successfully extracted text from page {i}/{len(pdf.pages)}")
+                    except Exception as e:
+                        logger.warning(f"Error extracting text from page {i} in {file_path}: {str(e)}")
+                        text.append('')
+                return ' '.join(text)
         elif extension in ['.doc', '.docx']:
-            # Requires python-docx package
+            logger.debug("Processing Word document")
             doc = Document(file_path)
+            logger.debug(f"Word document opened successfully. Paragraphs: {len(doc.paragraphs)}")
             return ' '.join(paragraph.text for paragraph in doc.paragraphs)
         else:
+            logger.warning(f"Unsupported file type: {extension}")
             return ''
-    except (IOError, FileNotFoundError, pdfplumber.PDFSyntaxError, ValueError) as e:
-        print(f"Error extracting text from {file_path}: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error extracting text from {file_path}: {str(e)}", exc_info=True)
         return ''
 
 def find_dollar_amounts(text: str) -> List[Dict]:
@@ -58,26 +86,21 @@ def find_dollar_amounts(text: str) -> List[Dict]:
     return findings
 
 def create_project_db(project_path: str) -> Dict[str, pd.DataFrame]:
-    """
-    Create pandas DataFrames of files in project folder structure, organized by folder.
-    
-    Args:
-        project_path: Path to project root directory
-        
-    Returns:
-        Dictionary of DataFrames, keyed by folder name
-    """
+    """Create pandas DataFrames of files in project folder structure"""
+    logger.info(f"Creating project database for: {project_path}")
     folder_dfs = {}
     
     for root, dirs, files in os.walk(project_path):
-        # Get folder name from path
         folder_name = os.path.basename(root)
+        logger.debug(f"Processing folder: {folder_name}")
+        logger.debug(f"Found {len(files)} files and {len(dirs)} subdirectories")
         
-        if files:  # Only process folders that contain files
+        if files:
             file_data = []
             for file in files:
                 file_path = os.path.join(root, file)
                 file_type = os.path.splitext(file)[1].lower()
+                logger.debug(f"Processing file: {file} (type: {file_type})")
                 
                 file_data.append({
                     'filename': file,
@@ -85,17 +108,17 @@ def create_project_db(project_path: str) -> Dict[str, pd.DataFrame]:
                     'file_type': file_type
                 })
             
-            # Create DataFrame for this folder
             df = pd.DataFrame(file_data)
+            logger.debug(f"Created DataFrame for folder {folder_name} with {len(df)} files")
             
-            # Add to dictionary, combining with existing data if folder name exists
             if folder_name in folder_dfs:
+                logger.debug(f"Merging with existing data for folder: {folder_name}")
                 folder_dfs[folder_name] = pd.concat([folder_dfs[folder_name], df], ignore_index=True)
             else:
                 folder_dfs[folder_name] = df
-                
+    
+    logger.info(f"Project database creation complete. Total folders processed: {len(folder_dfs)}")
     return folder_dfs
-
 
 def analyze_proposals(project_paths: List[str]) -> pd.DataFrame:
     """
@@ -162,57 +185,52 @@ def get_year_project_paths(base_path: str, year: str) -> List[str]:
     return sorted(project_paths)
 
 def analyze_scope_of_work(project_paths: List[str]) -> pd.DataFrame:
-    """
-    Analyze proposal documents to extract scope of work sections and categorize them.
-    
-    Args:
-        project_paths (List[str]): List of paths to project folders to analyze
-        
-    Returns:
-        pd.DataFrame: DataFrame containing scope categories and details for each project
-    """
+    """Analyze proposal documents for scope of work"""
+    logger.info("Starting scope of work analysis")
     all_scopes = []
     
     for project_path in project_paths:
-        # Walk through project directory
+        logger.debug(f"Processing project: {project_path}")
         for root, _, files in os.walk(project_path):
             for filename in files:
                 if filename.lower().endswith(('.doc', '.docx', '.pdf')):
                     file_path = os.path.join(root, filename)
+                    logger.debug(f"Analyzing file: {filename}")
                     
-                    # Extract text content
                     try:
                         text_content = extract_text_from_file(file_path)
+                        if text_content:
+                            logger.debug("Successfully extracted text content")
+                            scope_match = re.search(r'(?i)scope\s+of\s+work\s*:?(.*?)(?:\n\s*[A-Z][A-Z\s]+:|$)', 
+                                                  text_content, re.DOTALL)
+                            
+                            if scope_match:
+                                logger.debug("Found scope of work section")
+                                scope_text = scope_match.group(1).strip()
+                                scope_items = re.split(r'\n\s*[•\-\d]+\.?\s*', scope_text)
+                                scope_items = [item.strip() for item in scope_items if item.strip()]
+                                
+                                logger.debug(f"Found {len(scope_items)} scope items")
+                                for item in scope_items:
+                                    category = categorize_scope_item(item)
+                                    logger.debug(f"Categorized scope item as: {category}")
+                                    scope_info = {
+                                        'project_path': project_path,
+                                        'source_file': filename,
+                                        'scope_item': item,
+                                        'category': category
+                                    }
+                                    all_scopes.append(scope_info)
+                            else:
+                                logger.debug("No scope of work section found in document")
                     except Exception as e:
-                        print(f"Warning: Could not read {file_path}: {str(e)}")
-                        continue
-                        
-                    if text_content:
-                        # Find scope of work section using regex
-                        scope_match = re.search(r'(?i)scope\s+of\s+work\s*:?(.*?)(?:\n\s*[A-Z][A-Z\s]+:|$)', 
-                                              text_content, re.DOTALL)
-                        
-                        if scope_match:
-                            scope_text = scope_match.group(1).strip()
-                            
-                            # Split into bullet points/numbered items
-                            scope_items = re.split(r'\n\s*[•\-\d]+\.?\s*', scope_text)
-                            scope_items = [item.strip() for item in scope_items if item.strip()]
-                            
-                            # Categorize each scope item
-                            for item in scope_items:
-                                scope_info = {
-                                    'project_path': project_path,
-                                    'source_file': filename,
-                                    'scope_item': item,
-                                    'category': categorize_scope_item(item)
-                                }
-                                all_scopes.append(scope_info)
+                        logger.error(f"Error processing file {file_path}: {str(e)}", exc_info=True)
     
-    # Create DataFrame from findings
+    logger.info(f"Scope analysis complete. Found {len(all_scopes)} scope items")
     if all_scopes:
         results_df = pd.DataFrame(all_scopes)
     else:
+        logger.warning("No scope items found in any documents")
         results_df = pd.DataFrame(columns=['project_path', 'source_file', 'scope_item', 'category'])
     
     return results_df
@@ -299,148 +317,113 @@ def create_project_file_list(project_path: str | list[str], output_file: str = N
     return folder_structure
 
 def plot_folder_tree(project_path: str | list[str], folder_structure: dict = None):
-    """
-    Plot the folder tree of a project, highlighting which sub-folders have large numbers of files.
-    
-    Args:
-        project_path: Path to the project directory or list of project paths
-        folder_structure: Dictionary with folder structure and file counts (if None, will be generated)
-    """
-    # Import networkx here to avoid loading it during Django startup
-    import networkx as nx
-    
-    # Handle both single path and list of paths
+    """Plot the folder tree visualization"""
+    logger.info("Starting folder tree visualization")
+    G = nx.DiGraph()
+    cmap = get_cmap('viridis')
+
     if isinstance(project_path, list):
-        # Create a combined graph for all projects
-        G = nx.DiGraph()
-        
+        logger.debug(f"Processing multiple project paths: {len(project_path)} projects")
+
         for path in project_path:
-            # Generate folder structure for this path if not provided
+            logger.debug(f"Processing project path: {path}")
             if folder_structure is None:
+                logger.debug("Generating folder structure")
                 current_structure = create_project_file_list(path)
             else:
                 current_structure = folder_structure
-                
-            # Add nodes for each folder
             project_name = os.path.basename(path)
-            G.add_node(project_name, files=0)  # Root node
-            
-            # Process each folder
+            logger.debug(f"Adding root node: {project_name}")
+            G.add_node(project_name, files=0)
             for folder_path, file_count in current_structure.items():
+                logger.debug(f"Processing folder: {folder_path} with {file_count} files")
                 if folder_path == '':
-                    # This is the root, update its file count
                     G.nodes[project_name]['files'] += file_count
                     continue
-                    
-                # Split path into components
                 components = folder_path.split(os.sep)
-                
-                # Add nodes and edges for each level
                 parent = project_name
                 for i, component in enumerate(components):
-                    # Create path up to this component
                     if i == 0:
-                        path = component
+                        node_path = component
                     else:
-                        path = os.sep.join(components[:i+1])
-                        
-                    # If this node doesn't exist yet, add it
-                    if not G.has_node(path):
-                        G.add_node(path, files=0)
-                        G.add_edge(parent, path)
-                    
-                    # If this is the leaf node, add file count
+                        node_path = os.sep.join(components[:i+1])
+                    if not G.has_node(node_path):
+                        logger.debug(f"Adding new node: {node_path}")
+                        G.add_node(node_path, files=0)
+                        G.add_edge(parent, node_path)
                     if i == len(components) - 1:
-                        G.nodes[path]['files'] += file_count
-                        
-                    parent = path
-        
-        # Use the first project name for the plot title
+                        G.nodes[node_path]['files'] += file_count
+                    parent = node_path
         project_name = os.path.basename(project_path[0])
     else:
-        # Single path case - use existing logic
+        logger.debug("Processing single project path")
         if folder_structure is None:
-            folder_structure = create_project_file_list(project_path)
-        
-        # Create a directed graph
-        G = nx.DiGraph()
-        
-        # Add nodes for each folder
+            logger.debug("Generating folder structure")
+            current_structure = create_project_file_list(project_path)
+        else:
+            current_structure = folder_structure
         project_name = os.path.basename(project_path)
-        G.add_node(project_name, files=0)  # Root node
-        
-        # Process each folder
-        for folder_path, file_count in folder_structure.items():
+        logger.debug(f"Adding root node: {project_name}")
+        G.add_node(project_name, files=0)
+        for folder_path, file_count in current_structure.items():
+            logger.debug(f"Processing folder: {folder_path} with {file_count} files")
             if folder_path == '':
-                # This is the root, update its file count
                 G.nodes[project_name]['files'] += file_count
                 continue
-                
-            # Split path into components
             components = folder_path.split(os.sep)
-            
-            # Add nodes and edges for each level
             parent = project_name
             for i, component in enumerate(components):
-                # Create path up to this component
                 if i == 0:
-                    path = component
+                    node_path = component
                 else:
-                    path = os.sep.join(components[:i+1])
-                    
-                # If this node doesn't exist yet, add it
-                if not G.has_node(path):
-                    G.add_node(path, files=0)
-                    G.add_edge(parent, path)
-                
-                # If this is the leaf node, add file count
+                    node_path = os.sep.join(components[:i+1])
+                if not G.has_node(node_path):
+                    logger.debug(f"Adding new node: {node_path}")
+                    G.add_node(node_path, files=0)
+                    G.add_edge(parent, node_path)
                 if i == len(components) - 1:
-                    G.nodes[path]['files'] += file_count
-                    
-                parent = path
-    
-    # Calculate node sizes based on file counts
+                    G.nodes[node_path]['files'] += file_count
+                parent = node_path
+    logger.debug("Calculating visualization parameters")
     max_files = max([data['files'] for _, data in G.nodes(data=True)]) if G.nodes else 1
-    node_sizes = [2000 * (data['files'] / max_files) + 500 for _, data in G.nodes(data=True)]
-    
-    # Calculate node colors based on file counts
-    cmap = get_cmap('viridis')
-    node_colors = [cmap(data['files'] / max_files) if max_files > 0 else cmap(0) for _, data in G.nodes(data=True)]
-    
-    # Create labels with folder name and file count
-    labels = {node: f"{node.split(os.sep)[-1]}\n({data['files']} files)" 
-              for node, data in G.nodes(data=True)}
-    
-    # Create the plot
-    plt.figure(figsize=(15, 10))
-    # Use spring_layout instead of graphviz_layout
+    logger.debug(f"Maximum files in any folder: {max_files}")
+    logger.debug("Creating plot")
+    fig, ax = plt.subplots(figsize=(15, 10))
     pos = nx.spring_layout(G, k=1, iterations=50)
-    
-    # Draw the graph
-    nx.draw(G, pos, 
-            node_size=node_sizes,
-            node_color=node_colors,
+    logger.debug("Drawing network graph")
+    nx.draw(G, pos,
+            node_size=[2000 * (data['files'] / max_files) + 500 for _, data in G.nodes(data=True)],
+            node_color=[cmap(data['files'] / max_files) if max_files > 0 else cmap(0) for _, data in G.nodes(data=True)],
             with_labels=True,
-            labels=labels,
+            labels={node: f"{node.split(os.sep)[-1]}\n({data['files']} files)" 
+                   for node, data in G.nodes(data=True)},
             font_size=8,
             font_weight='bold',
             arrows=False,
-            alpha=0.8)
-    
-    # Add a colorbar
+            alpha=0.8,
+            ax=ax)
+    logger.debug("Adding colorbar and finalizing plot")
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(0, max_files))
     sm.set_array([])
-    cbar = plt.colorbar(sm)
-    cbar.set_label('Number of Files')
-    
-    # Add title
-    plt.title(f"Folder Structure for {project_name}", fontsize=16)
-    
-    # Save the plot
+    plt.colorbar(sm, ax=ax, label='Number of Files')
+    ax.set_title(f"Folder Structure for {project_name}", fontsize=16)
+    logger.info(f"Saving visualization to: {project_name}_folder_tree.png")
     plt.savefig(f"{project_name}_folder_tree.png", dpi=300, bbox_inches='tight')
     plt.close()
+    logger.info("Folder tree visualization complete")
 
-
+def format_file_tree(project_path: str) -> str:
+    """
+    Return a formatted string representing the file/folder tree for display.
+    """
+    lines = []
+    for root, dirs, files in os.walk(project_path):
+        rel_path = os.path.relpath(root, project_path)
+        indent = '    ' * (rel_path.count(os.sep) if rel_path != '.' else 0)
+        lines.append(f"{indent}📁 {os.path.basename(root)}/")
+        for file in files:
+            lines.append(f"{indent}    📄 {file}")
+    return '\n'.join(lines)
 
 def main():
     """Process multiple project folders to analyze proposal documents for dollar amounts."""
@@ -485,6 +468,10 @@ def main():
 
     # Plot folder tree
     plot_folder_tree(project_paths, project_file_list)
+
+    # Format file tree
+    formatted_tree = format_file_tree(project_paths[0])
+    print(formatted_tree)
 
 if __name__ == "__main__":
     main()

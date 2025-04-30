@@ -15,7 +15,8 @@ def analyze_project_metadata(metadata_id: int) -> None:
         analyze_proposals,
         analyze_scope_of_work,
         create_project_file_list,
-        plot_folder_tree
+        plot_folder_tree,
+        format_file_tree
     )
     
     try:
@@ -32,6 +33,10 @@ def analyze_project_metadata(metadata_id: int) -> None:
         # Create file structure analysis
         file_structure = create_project_file_list(project_path)
         metadata.save_file_structure(file_structure)
+        
+        # Save formatted file tree string for display
+        metadata.file_structure_pretty = format_file_tree(project_path)
+        metadata.save()
         
         # Generate folder tree visualization
         plot_folder_tree(project_path, file_structure)

@@ -102,7 +102,7 @@ class ProjectMetadata(models.Model):
     project_path = models.CharField(max_length=500, help_text="Full path to the project directory")
     last_analyzed = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=ANALYSIS_STATUS, default='pending')
-    file_structure = models.JSONField(null=True, blank=True, help_text="JSON representation of project file structure")
+    file_structure_pretty = models.TextField(null=True, blank=True, help_text="Formatted file structure for display")
     email_summary = models.TextField(blank=True, help_text="Summary of processed email content")
     dollar_amounts = models.JSONField(null=True, blank=True, help_text="Extracted dollar amounts from proposals")
     scope_analysis = models.JSONField(null=True, blank=True, help_text="Analysis of scope of work")
