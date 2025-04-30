@@ -50,14 +50,16 @@
         </div>
     </div>
 
-    {% if metadata.file_structure %}
+    {% if metadata.file_structure_pretty %}
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">File Structure</h5>
             </div>
             <div class="card-body">
-                <pre class="mb-0"><code>{{ metadata.file_structure|pprint }}</code></pre>
+                <div class="file-tree" style="max-height: 400px; overflow-y: auto;">
+                    <pre class="mb-0" style="white-space: pre; font-family: monospace;">{{ metadata.file_structure_pretty }}</pre>
+                </div>
             </div>
         </div>
     </div>
