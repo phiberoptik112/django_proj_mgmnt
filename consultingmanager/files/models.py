@@ -65,15 +65,25 @@ class FileMetadata(models.Model):
     sha256_hash = models.CharField(max_length=64, null=True, blank=True)
     extracted_text = models.TextField(null=True, blank=True)
     metadata_json = models.JSONField(default=dict)  # For storing additional metadata
-    
+
+
+class RoomAcousticsData(models.Model):
+    """Stores room acoustics data"""
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='room_acoustics_data')
+    folder = models.ForeignKey(ProjectFolder, on_delete=models.CASCADE, related_name='room_acoustics_data')
+    room_volume = models.FloatField(null=True, blank=True)
+    wall_treatment_materials = models.JSONField(null=True, blank=True)
+    wall_treatment_cost = models.FloatField(null=True, blank=True)
+    ceiling_treatment_materials = models.JSONField(null=True, blank=True)
+    ceiling_treatment_cost = models.FloatField(null=True, blank=True)
+    floor_treatment_materials = models.JSONField(null=True, blank=True)
+    floor_treatment_cost = models.FloatField(null=True, blank=True)
     class Meta:
         indexes = [
             models.Index(fields=['project', 'folder']),
-            models.Index(fields=['file_type']),
-        ]
-        
+            ]
     def __str__(self):
-        return f"{self.project.project_code} - {self.filename}"
+        return f"{self.project.project_code} - {self.folder.name} - {self.room_volume}"
 
 class ProjectAnalysis(models.Model):
     """Stores analysis results for projects"""
