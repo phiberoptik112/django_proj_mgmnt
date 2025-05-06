@@ -1,0 +1,60 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Room Acoustics Data - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Room Acoustics Data Entry</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="room_volume" class="form-label">Room Volume (cubic feet)</label>
+                            <input type="number" step="0.01" class="form-control" id="room_volume" name="room_volume" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <h4>Wall Treatment</h4>
+                            <label for="wall_treatment_materials" class="form-label">Materials</label>
+                            <textarea class="form-control" id="wall_treatment_materials" name="wall_treatment_materials" rows="3"></textarea>
+                            
+                            <label for="wall_treatment_volume" class="form-label mt-2">Volume (cubic feet)</label>
+                            <input type="number" step="0.01" class="form-control" id="wall_treatment_volume" name="wall_treatment_volume">
+                        </div>
+
+                        <div class="mb-3">
+                            <h4>Ceiling Treatment</h4>
+                            <label for="ceiling_treatment_materials" class="form-label">Materials</label>
+                            <textarea class="form-control" id="ceiling_treatment_materials" name="ceiling_treatment_materials" rows="3"></textarea>
+                            
+                            <label for="ceiling_treatment_volume" class="form-label mt-2">Volume (cubic feet)</label>
+                            <input type="number" step="0.01" class="form-control" id="ceiling_treatment_volume" name="ceiling_treatment_volume">
+                        </div>
+
+                        <div class="mb-3">
+                            <h4>Floor Treatment</h4>
+                            <label for="floor_treatment_materials" class="form-label">Materials</label>
+                            <textarea class="form-control" id="floor_treatment_materials" name="floor_treatment_materials" rows="3"></textarea>
+                            
+                            <label for="floor_treatment_volume" class="form-label mt-2">Volume (cubic feet)</label>
+                            <input type="number" step="0.01" class="form-control" id="floor_treatment_volume" name="floor_treatment_volume">
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">Save Room Acoustics Data</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

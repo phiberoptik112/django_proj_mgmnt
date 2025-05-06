@@ -73,11 +73,11 @@ class RoomAcousticsData(models.Model):
     folder = models.ForeignKey(ProjectFolder, on_delete=models.CASCADE, related_name='room_acoustics_data')
     room_volume = models.FloatField(null=True, blank=True)
     wall_treatment_materials = models.JSONField(null=True, blank=True)
-    wall_treatment_cost = models.FloatField(null=True, blank=True)
+    wall_treatment_volume = models.FloatField(null=True, blank=True)
     ceiling_treatment_materials = models.JSONField(null=True, blank=True)
-    ceiling_treatment_cost = models.FloatField(null=True, blank=True)
+    ceiling_treatment_volume = models.FloatField(null=True, blank=True)
     floor_treatment_materials = models.JSONField(null=True, blank=True)
-    floor_treatment_cost = models.FloatField(null=True, blank=True)
+    floor_treatment_volume = models.FloatField(null=True, blank=True)
     class Meta:
         indexes = [
             models.Index(fields=['project', 'folder']),
@@ -91,6 +91,7 @@ class ProjectAnalysis(models.Model):
     analysis_type = models.CharField(max_length=50)  # e.g., 'scope', 'proposal', 'cost'
     analysis_date = models.DateTimeField(default=timezone.now)
     results_json = models.JSONField()  # Stores analysis results in JSON format
+
     
     class Meta:
         indexes = [
@@ -140,3 +141,33 @@ class ProjectMetadata(models.Model):
     class Meta:
         verbose_name_plural = "Project Metadata"
         ordering = ['-updated_at']
+
+class Email(models.Model):
+    """Stores email data"""
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='emails')
+    folder = models.ForeignKey(ProjectFolder, on_delete=models.CASCADE, related_name='emails')
+    filename = models.CharField(max_length=255)
+    file_type = models.CharField(max_length=50)
+    sender = models.CharField(max_length=255)
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    date = models.DateTimeField()
+    attachments = models.JSONField(null=True, blank=True)
+    thread_id = models.CharField(max_length=255)
+    thread_subject = models.CharField(max_length=255)
+    thread_snippet = models.TextField()
+    thread_date = models.DateTimeField()
+    thread_participants = models.JSONField(null=True, blank=True)
+    thread_message_count = models.IntegerField()
+    
+    def __str__(self):
+        return f"{self.project.project_code} - {self.folder.name} - {self.filename}"
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['project', 'folder']),
+        ]
+    
+    def __str__(self):
+        return f"{self.project.project_code} - {self.folder.name} - {self.filename}"
+    

@@ -5,17 +5,29 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import File, ProjectMetadata, RoomAcousticsData
+from .models import File, ProjectMetadata, RoomAcousticsData, Email
 from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm
 from .tasks import analyze_project_metadata
 
 # Create your views here.
+
 class RoomAcousticsCreateView(LoginRequiredMixin, CreateView):
     model = RoomAcousticsData
     form_class = RoomAcousticsDataForm
     template_name = 'files/room_acoustics_form.html'
     success_url = reverse_lazy('files:file-list')
-    
+
+    def room_acoustics_create(request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        if request.method == 'POST':
+
+            form = RoomAcousticsDataForm(request.POST)
+            if form.is_valid():
+                room_data = form.save(commit=False)
+                room_data.project = project
+                room_data.save()
+                return redirect('files:file-list')
+        return render(request, 'files/room_acoustics_form.html', {'form': form})
 
 class FileListView(LoginRequiredMixin, ListView):
     model = File

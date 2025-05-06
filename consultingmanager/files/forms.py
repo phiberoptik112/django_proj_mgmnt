@@ -8,21 +8,21 @@ class RoomAcousticsDataForm(forms.ModelForm):
             'project', 
             'room_volume',
             'wall_treatment_materials', 
-            'wall_treatment_cost', 
+            'wall_treatment_volume', 
             'ceiling_treatment_materials', 
-            'ceiling_treatment_cost', 
+            'ceiling_treatment_volume', 
             'floor_treatment_materials', 
-            'floor_treatment_cost'
+            'floor_treatment_volume'
         ]
         widgets = {
             'project': forms.Select(attrs={'class': 'form-control'}),
             'room_volume': forms.NumberInput(attrs={'class': 'form-control'}),
             'wall_treatment_materials': forms.TextInput(attrs={'class': 'form-control'}),
-            'wall_treatment_cost': forms.NumberInput(attrs={'class': 'form-control'}),
+            'wall_treatment_volume': forms.NumberInput(attrs={'class': 'form-control'}),
             'ceiling_treatment_materials': forms.TextInput(attrs={'class': 'form-control'}),
-            'ceiling_treatment_cost': forms.NumberInput(attrs={'class': 'form-control'}),
+            'ceiling_treatment_volume': forms.NumberInput(attrs={'class': 'form-control'}),
             'floor_treatment_materials': forms.TextInput(attrs={'class': 'form-control'}),
-            'floor_treatment_cost': forms.NumberInput(attrs={'class': 'form-control'}),
+            'floor_treatment_volume': forms.NumberInput(attrs={'class': 'form-control'}),
         }
         exclude = ['project']
         
