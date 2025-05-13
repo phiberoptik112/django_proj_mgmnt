@@ -4,6 +4,7 @@ venv/
 ENV/
 new_env/
 debug_env/
+.venv/
 # Python bytecode
 __pycache__/
 *.py[cod]

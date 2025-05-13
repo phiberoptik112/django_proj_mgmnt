@@ -171,3 +171,22 @@ class Email(models.Model):
     def __str__(self):
         return f"{self.project.project_code} - {self.folder.name} - {self.filename}"
     
+class Proposal(models.Model):
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='proposals')
+    date = models.DateField()
+    recipient_name = models.CharField(max_length=255)
+    recipient_company = models.CharField(max_length=255)
+    recipient_address = models.TextField()
+    subject = models.CharField(max_length=255)
+    reference = models.CharField(max_length=255, blank=True)
+    introduction = models.TextField()
+    basic_services = models.JSONField(help_text="List of basic services and descriptions")
+    additional_services = models.JSONField(help_text="List of additional services and descriptions", blank=True, null=True)
+    compensation = models.JSONField(help_text="Compensation details, fees, terms")
+    terms = models.TextField(blank=True)
+    attachments = models.JSONField(blank=True, null=True)
+    status = models.CharField(max_length=50, choices=[('draft', 'Draft'), ('sent', 'Sent'), ('accepted', 'Accepted')], default='draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    

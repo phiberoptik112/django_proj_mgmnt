@@ -203,7 +203,38 @@ def analyze_scope_of_work(project_paths: List[str]) -> pd.DataFrame:
                             logger.debug("Successfully extracted text content")
                             scope_match = re.search(r'(?i)scope\s+of\s+work\s*:?(.*?)(?:\n\s*[A-Z][A-Z\s]+:|$)', 
                                                   text_content, re.DOTALL)
-                            
+                            # Look for Basic Services section
+                            basic_services_match = re.search(r'(?i)basic\s+services\s*:?(.*?)(?:\n\s*[A-Z][A-Z\s]+:|$)', 
+                                                          text_content, re.DOTALL)
+                            additional_services_match = re.search(r'(?i)additional\s+services\s*:?(.*?)(?:\n\s*[A-Z][A-Z\s]+:|$)', 
+                                                                  text_content, re.DOTALL)
+                            if basic_services_match:
+                                logger.debug("Found basic services section")
+                                services_text = basic_services_match.group(1).strip()
+                                service_items = re.split(r'\n\s*[•\-\d]+\.?\s*', services_text)
+                                service_items = [item.strip() for item in service_items if item.strip()]
+                                
+                                logger.debug(f"Found {len(service_items)} basic service items")
+                                for item in service_items:
+                                    scope_info = {
+                                        'project_path': project_path,
+                                        'source_file': filename,
+                                        'scope_item': item,
+                                        'category': 'basic_services'
+                                    }
+                                    all_scopes.append(scope_info)
+                            else:
+                                logger.debug("No basic services section found in document")
+                            if additional_services_match:
+                                logger.debug("Found additional services section")
+                                services_text = additional_services_match.group(1).strip()
+                                service_items = re.split(r'\n\s*[•\-\d]+\.?\s*', services_text)
+                                service_items = [item.strip() for item in service_items if item.strip()]
+                                
+                                logger.debug(f"Found {len(service_items)} additional service items")
+                                for item in service_items:
+                                    scope_info = {
+                                        'project_path': project_path,
                             if scope_match:
                                 logger.debug("Found scope of work section")
                                 scope_text = scope_match.group(1).strip()
@@ -243,11 +274,10 @@ def categorize_scope_item(text: str) -> str:
     text = text.lower()
     
     categories = {
-        'structural': ['structural', 'foundation', 'concrete', 'steel', 'framing', 'seismic'],
-        'assessment': ['assessment', 'evaluation', 'inspection', 'testing', 'analysis'],
-        'design': ['design', 'drawing', 'specification', 'detail'],
-        'documentation': ['report', 'documentation', 'document', 'submittal'],
-        'coordination': ['coordination', 'meeting', 'review', 'consultation']
+        'ASSESSMENT': ['calculate', 'AIIC', 'ASTC', 'ASTM E336-17a', 'ASTM E1007-16'],
+        'DESIGN': ['design', 'drawing', 'specification', 'detail'],
+        'DOCUMENTATION': ['report', 'documentation', 'document', 'submittal'],
+        'COORDINATION': ['coordination', 'meeting', 'review', 'consultation']
     }
     
     for category, keywords in categories.items():

@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from .models import File, ProjectMetadata, RoomAcousticsData, Email
 from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm
 from .tasks import analyze_project_metadata
-
+from projects.models import Project
 # Create your views here.
 
 class RoomAcousticsCreateView(LoginRequiredMixin, CreateView):
@@ -68,6 +68,11 @@ class FileDeleteView(LoginRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'File deleted successfully.')
         return super().delete(request, *args, **kwargs)
+    
+class FileDetailView(LoginRequiredMixin, DetailView):
+    model = File
+    template_name = 'files/file_detail.html'
+    context_object_name = 'file'
 
 class ProjectMetadataCreateView(LoginRequiredMixin, CreateView):
     model = ProjectMetadata
