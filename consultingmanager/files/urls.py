@@ -15,5 +15,10 @@ urlpatterns = [
     path('metadata/<int:pk>/', views.metadata_detail, name='metadata-detail'),
     path('metadata/<int:pk>/update/', views.ProjectMetadataUpdateView.as_view(), name='metadata-update'),
     path('metadata/<int:pk>/analyze/', views.analyze_metadata, name='metadata-analyze'),
-
+    ### Proposal URLs
+    path('proposal/create/', views.ProposalCreateView.as_view(), name='proposal-create'),
+    path('proposal/<int:pk>/', views.ProposalDetailView.as_view(), name='proposal-detail'),
+    path('proposal/<int:pk>/update/', views.ProposalUpdateView.as_view(), name='proposal-update'),
+    path('proposal/<int:pk>/delete/', views.ProposalDeleteView.as_view(), name='proposal-delete'),
+    ### End Proposal URLs
 ] 

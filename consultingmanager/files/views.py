@@ -6,9 +6,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from .models import File, ProjectMetadata, RoomAcousticsData, Email
-from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm
+from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm, ProposalForm
 from .tasks import analyze_project_metadata
 from projects.models import Project
+from .models import Proposal
 # Create your views here.
 
 class RoomAcousticsCreateView(LoginRequiredMixin, CreateView):
@@ -109,6 +110,70 @@ class ProjectMetadataUpdateView(LoginRequiredMixin, UpdateView):
         else:
             messages.success(self.request, 'Project metadata updated successfully.')
         return response
+
+class ProposalCreateView(LoginRequiredMixin, CreateView):
+    model = Proposal
+    form_class = ProposalForm
+    template_name = 'files/proposal_form.html'
+    success_url = reverse_lazy('files:proposal-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['projects'] = Project.objects.all()
+        return context
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+            messages.success(self.request, 'Proposal created successfully.')
+            return response
+        except Exception as e:
+            messages.error(self.request, f'Error creating proposal: {str(e)}')
+            return self.form_invalid(form)
+
+class ProposalUpdateView(LoginRequiredMixin, UpdateView):
+    model = Proposal
+    form_class = ProposalForm
+    template_name = 'files/proposal_form.html'
+    success_url = reverse_lazy('files:proposal-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['projects'] = Project.objects.all()
+        return context
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+            messages.success(self.request, 'Proposal updated successfully.')
+            return response
+        except Exception as e:
+            messages.error(self.request, f'Error updating proposal: {str(e)}')
+            return self.form_invalid(form)
+
+class ProposalDeleteView(LoginRequiredMixin, DeleteView):
+    model = Proposal
+    template_name = 'files/proposal_confirm_delete.html'
+    success_url = reverse_lazy('files:proposal-list')
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            response = super().delete(request, *args, **kwargs)
+            messages.success(request, 'Proposal deleted successfully.')
+            return response
+        except Exception as e:
+            messages.error(request, f'Error deleting proposal: {str(e)}')
+            return redirect('files:proposal-list')
+
+class ProposalDetailView(LoginRequiredMixin, DetailView):
+    model = Proposal
+    template_name = 'files/proposal_detail.html'
+    context_object_name = 'proposal'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project'] = self.object.project
+        return context
 
 @login_required
 def analyze_metadata(request, pk):

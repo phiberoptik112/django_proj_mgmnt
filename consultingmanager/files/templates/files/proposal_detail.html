@@ -1,0 +1,152 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ proposal.subject }} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Proposal Details</h1>
+        <div class="btn-group">
+            <a href="{% url 'files:proposal-update' proposal.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'files:proposal-delete' proposal.pk %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Delete
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Date</dt>
+                        <dd class="col-sm-9">{{ proposal.date|date:"F d, Y" }}</dd>
+
+                        <dt class="col-sm-3">Status</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge {% if proposal.status == 'accepted' %}bg-success
+                                             {% elif proposal.status == 'sent' %}bg-primary
+                                             {% else %}bg-secondary{% endif %}">
+                                {{ proposal.status|title }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-3">Recipient</dt>
+                        <dd class="col-sm-9">{{ proposal.recipient_name }}</dd>
+
+                        <dt class="col-sm-3">Company</dt>
+                        <dd class="col-sm-9">{{ proposal.recipient_company }}</dd>
+
+                        <dt class="col-sm-3">Address</dt>
+                        <dd class="col-sm-9">{{ proposal.recipient_address|linebreaks }}</dd>
+
+                        <dt class="col-sm-3">Subject</dt>
+                        <dd class="col-sm-9">{{ proposal.subject }}</dd>
+
+                        <dt class="col-sm-3">Reference</dt>
+                        <dd class="col-sm-9">{{ proposal.reference|default:"N/A" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Introduction</h5>
+                </div>
+                <div class="card-body">
+                    {{ proposal.introduction|linebreaks }}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Basic Services</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for service in proposal.basic_services %}
+                        <li class="list-group-item">{{ service }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            {% if proposal.additional_services %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Additional Services</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for service in proposal.additional_services %}
+                        <li class="list-group-item">{{ service }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Compensation</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0">{{ proposal.compensation|pprint }}</pre>
+                </div>
+            </div>
+
+            {% if proposal.terms %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Terms</h5>
+                </div>
+                <div class="card-body">
+                    {{ proposal.terms|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Attachments</h5>
+                </div>
+                <div class="card-body">
+                    {% if proposal.attachments %}
+                    <ul class="list-group list-group-flush">
+                        {% for attachment in proposal.attachments %}
+                        <li class="list-group-item">
+                            <i class="fas fa-paperclip"></i> {{ attachment }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No attachments</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Metadata</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Created</dt>
+                        <dd class="col-sm-8">{{ proposal.created_at|date:"M d, Y H:i" }}</dd>
+
+                        <dt class="col-sm-4">Updated</dt>
+                        <dd class="col-sm-8">{{ proposal.updated_at|date:"M d, Y H:i" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

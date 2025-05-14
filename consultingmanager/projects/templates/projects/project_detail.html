@@ -265,6 +265,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- Proposals Card -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Proposals</h5>
+                    <a href="{% url 'files:proposal-import' project.pk %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-file-upload"></i> Import Proposal PDF
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if project.proposals.all %}
+                        <ul>
+                            {% for proposal in project.proposals.all %}
+                                <li>
+                                    {{ proposal.subject }} ({{ proposal.date }})
+                                    <!-- Optionally, link to a detail view for each proposal -->
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No proposals imported yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

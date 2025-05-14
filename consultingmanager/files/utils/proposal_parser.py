@@ -22,9 +22,9 @@ def parse_proposal_text(text):
         recipient_address = f"{recipient_match.group(3).strip()}, {recipient_match.group(4).strip()}"
 
     # Extract sections by headings
-    basic_services = extract_section(text, "BASIC SERVICES", "ADDITIONAL SERVICES")
-    additional_services = extract_section(text, "ADDITIONAL SERVICES", "COMPENSATION")
-    compensation = extract_section(text, "COMPENSATION", None)
+    basic_services = extract_section(text, "BASIC SERVICES")
+    additional_services = extract_section(text, "ADDITIONAL SERVICES")
+    compensation = extract_section(text, "COMPENSATION")
 
     # ...more parsing as needed...
 

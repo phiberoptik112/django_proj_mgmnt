@@ -172,6 +172,7 @@ class Email(models.Model):
         return f"{self.project.project_code} - {self.folder.name} - {self.filename}"
     
 class Proposal(models.Model):
+    # read in proposal data from pdf - use proposal_parser.py to extract data from pdf
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='proposals')
     date = models.DateField()
     recipient_name = models.CharField(max_length=255)
