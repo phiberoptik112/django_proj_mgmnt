@@ -1,15 +1,16 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, FormView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import File, ProjectMetadata, RoomAcousticsData, Email
-from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm, ProposalForm
+from .models import File, ProjectMetadata, RoomAcousticsData, Email, Proposal
+from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm, ProposalForm, ProposalImportForm
 from .tasks import analyze_project_metadata
 from projects.models import Project
-from .models import Proposal
+from .utils.proposal_parser import ProposalParser
+import os
 # Create your views here.
 
 class RoomAcousticsCreateView(LoginRequiredMixin, CreateView):
@@ -174,6 +175,58 @@ class ProposalDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['project'] = self.object.project
         return context
+
+class ProposalImportView(LoginRequiredMixin, FormView):
+    form_class = ProposalImportForm
+    template_name = 'files/proposal_import.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project'] = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        return context
+    
+    def form_valid(self, form):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        pdf_file = form.cleaned_data['pdf_file']
+        
+        try:
+            # Save the uploaded file temporarily
+            temp_path = os.path.join('/tmp', pdf_file.name)
+            with open(temp_path, 'wb+') as destination:
+                for chunk in pdf_file.chunks():
+                    destination.write(chunk)
+            
+            # Extract text from PDF
+            text = extract_text_from_pdf(temp_path)
+            
+            # Parse the proposal text
+            proposal_data = parse_proposal_text(text)
+            
+            # Create the proposal
+            proposal = Proposal.objects.create(
+                project=project,
+                date=proposal_data.get('date'),
+                recipient_name=proposal_data.get('recipient_name'),
+                recipient_company=proposal_data.get('recipient_company'),
+                recipient_address=proposal_data.get('recipient_address'),
+                subject=proposal_data.get('subject', 'Imported Proposal'),
+                introduction=proposal_data.get('introduction', ''),
+                basic_services=proposal_data.get('basic_services', []),
+                additional_services=proposal_data.get('additional_services', []),
+                compensation=proposal_data.get('compensation', {}),
+                terms=proposal_data.get('terms', ''),
+                status='draft'
+            )
+            
+            # Clean up temporary file
+            os.remove(temp_path)
+            
+            messages.success(self.request, 'Proposal imported successfully.')
+            return redirect('files:proposal-detail', pk=proposal.pk)
+            
+        except Exception as e:
+            messages.error(self.request, f'Error importing proposal: {str(e)}')
+            return self.form_invalid(form)
 
 @login_required
 def analyze_metadata(request, pk):

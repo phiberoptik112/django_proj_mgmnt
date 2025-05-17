@@ -21,4 +21,5 @@ urlpatterns = [
     path('proposal/<int:pk>/update/', views.ProposalUpdateView.as_view(), name='proposal-update'),
     path('proposal/<int:pk>/delete/', views.ProposalDeleteView.as_view(), name='proposal-delete'),
     ### End Proposal URLs
+    path('proposal/import/<int:project_id>/', views.ProposalImportView.as_view(), name='proposal-import'),
 ] 
