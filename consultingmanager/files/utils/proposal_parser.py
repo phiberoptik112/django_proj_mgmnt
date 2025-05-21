@@ -6,6 +6,11 @@ from files.models import Proposal
 import json
 import logging
 from pathlib import Path
+import hashlib
+from django.db.models import Q
+from files.models import Proposal, FileMetadata
+from files.utils.utilities import calculate_file_hash, find_proposal_by_hash
+import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,9 +25,24 @@ class ProposalParser:
     def __init__(self, pdf_path):
         self.pdf_path = pdf_path
         self.text = self.extract_text_from_pdf()
-        self.proposal_data = self.parse_proposal_text()
+        # self.proposal_data = self.parse_proposal_text()
         self.logger = logging.getLogger(__name__)
         self.errors = []
+
+    def extract_text_from_pdf(self):
+        """
+        Extract all text from the PDF file and return as a single string.
+        Returns:
+            str: The extracted text from the PDF, or an empty string if extraction fails.
+        """
+        try:
+            with pdfplumber.open(self.pdf_path) as pdf:
+                return "\n".join(
+                    page.extract_text() for page in pdf.pages if page.extract_text()
+                )
+        except Exception as e:
+            self.logger.error(f"Error extracting text from PDF: {e}")
+            return ""
 
     def extract_text(self):
         """Extract all text from the PDF"""
@@ -47,8 +67,8 @@ class ProposalParser:
             "recipient_name": self._extract_recipient_name(),
             "recipient_company": self._extract_recipient_company(),
             "recipient_address": self._extract_recipient_address(),
-            "subject": self._extract_subject(),
-            "reference": self._extract_reference(),
+            # "subject": self._extract_subject(),
+            # "reference": self._extract_reference(),
             "introduction": self._extract_introduction(),
             "basic_services": self._extract_basic_services(),
             "additional_services": self._extract_additional_services(),
@@ -219,17 +239,30 @@ class ProposalParser:
         
         return formatted_for_db
     
+    def _extract_additional_services(self):
+        """Extract and structure the Additional Services section"""
+        return self._extract_section_with_structure("ADDITIONAL SERVICES", "COMPENSATION")
+    def _extract_compensation(self):
+        """Extract and structure the Compensation section"""
+        return self._extract_section_with_structure("COMPENSATION", "sincerely")
+    
+    
+
     def to_model_dict(self):
         """Convert the extracted data to a dictionary that can be used to create a Proposal model instance"""
+        if not self.extracted_data:
+            self.parse()
+
+        basic_services = self._extract_basic_services()
         model_data = {
             "date": self.extracted_data["date"],
             "recipient_name": self.extracted_data["recipient_name"],
             "recipient_company": self.extracted_data["recipient_company"], 
             "recipient_address": self.extracted_data["recipient_address"],
-            "subject": self.extracted_data["subject"],
-            "reference": self.extracted_data["reference"],
+            # "subject": self.extracted_data["subject"],
+            # "reference": self.extracted_data["reference"],
             "introduction": self.extracted_data["introduction"],
-            "basic_services": self.extracted_data["basic_services"],
+            "basic_services": json.dumps(basic_services),
             "additional_services": self.extracted_data["additional_services"],
             "compensation": self.extracted_data["compensation"],
             "terms": self.extracted_data["terms"],
@@ -240,15 +273,134 @@ class ProposalParser:
         }
         return model_data
 
+    def check_duplicate_by_hash(self, project_id=None):
+        """
+        Check if this proposal already exists by comparing file hash
+        
+        Args:
+            project_id: Optional project ID to limit the search
+            
+        Returns:
+            tuple: (is_duplicate, existing_proposal, hash_value)
+        """
+        try:
+            # Calculate MD5 hash
+            md5_hash = calculate_file_hash(self.pdf_path, 'md5')
+            
+            # Optional: also calculate SHA256 for higher security
+            # sha256_hash = calculate_file_hash(self.pdf_path, 'sha256')
+            
+            # Search for proposal with this hash
+            existing_proposal = find_proposal_by_hash(md5_hash, project_id, 'md5')
+            
+            if existing_proposal:
+                return True, existing_proposal, md5_hash
+            
+            return False, None, md5_hash
+            
+        except Exception as e:
+            # Log the error
+            print(f"Error checking for duplicate: {e}")
+            # Return the error but don't stop the import process
+            return False, None, None
     
-    # def extract_proposal_data(text):
-    #     """Extract data from the proposal text."""
-    #     proposal_data = {}
-    #     proposal_data['proposal_date'] = extract_date(text)
-    #     proposal_data['proposal_number'] = extract_proposal_number(text)
-    #     proposal_data['client_name'] = extract_client_name(text)
-    #     proposal_data['project_name'] = extract_project_name(text)
-    #     proposal_data['project_description'] = extract_project_description(text)
-    #     proposal_data['scope_of_work'] = extract_scope_of_work(text)
-    #     proposal_data['total_cost'] = extract_total_cost(text)
-    #     return "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())
+    def store_file_hash(self, proposal, filename=None):
+        """
+        Store the file hash in the proposal's attachments
+        
+        Args:
+            proposal: Proposal object to update
+            filename: Original filename (optional)
+            
+        Returns:
+            bool: Success or failure
+        """
+        try:
+            # Calculate hashes
+            md5_hash = calculate_file_hash(self.pdf_path, 'md5')
+            sha256_hash = calculate_file_hash(self.pdf_path, 'sha256')
+            
+            # Get file size
+            file_size = os.path.getsize(self.pdf_path)
+            
+            # Prepare attachment info
+            attachment_info = {
+                'filename': filename or os.path.basename(self.pdf_path),
+                'md5_hash': md5_hash,
+                'sha256_hash': sha256_hash,
+                'size_bytes': file_size,
+                'mime_type': 'application/pdf'
+            }
+            
+            # Update the proposal's attachments
+            import json
+            
+            # Handle case where attachments is None or empty
+            if not proposal.attachments:
+                proposal.attachments = json.dumps([attachment_info])
+            else:
+                # Handle string format
+                if isinstance(proposal.attachments, str):
+                    try:
+                        existing_attachments = json.loads(proposal.attachments)
+                    except json.JSONDecodeError:
+                        existing_attachments = []
+                else:
+                    existing_attachments = proposal.attachments
+                
+                # Handle both list and dict formats
+                if isinstance(existing_attachments, list):
+                    existing_attachments.append(attachment_info)
+                else:
+                    existing_attachments = [existing_attachments, attachment_info]
+                
+                proposal.attachments = json.dumps(existing_attachments)
+            
+            # Save the proposal
+            proposal.save()
+            return True
+            
+        except Exception as e:
+            # Log the error
+            print(f"Error storing file hash: {e}")
+            return False
+
+    def _extract_recipient_block(self):
+        """
+        Extracts the block of text containing recipient info (name, company, address)
+        which appears after the date and before 'RE:' or 'BASIC SERVICES'.
+        """
+        # Find the date in the text
+        date_pattern = r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}'
+        date_match = re.search(date_pattern, self.text)
+        if not date_match:
+            return ""
+        start_idx = date_match.end()
+
+        # Find the next heading ("RE:" or "BASIC SERVICES")
+        after_date = self.text[start_idx:]
+        end_match = re.search(r'\b(RE:|BASIC SERVICES)\b', after_date)
+        end_idx = end_match.start() if end_match else len(after_date)
+
+        # Extract the block and clean up
+        recipient_block = after_date[:end_idx].strip()
+        # Remove empty lines and strip
+        lines = [line.strip() for line in recipient_block.split('\n') if line.strip()]
+        return lines
+
+    def _extract_recipient_name(self):
+        """Extract the recipient's name from the recipient block."""
+        lines = self._extract_recipient_block()
+        return lines[0] if lines else ""
+
+    def _extract_recipient_company(self):
+        """Extract the recipient's company from the recipient block."""
+        lines = self._extract_recipient_block()
+        return lines[1] if len(lines) > 1 else ""
+
+    def _extract_recipient_address(self):
+        """Extract the recipient's address from the recipient block."""
+        lines = self._extract_recipient_block()
+        if len(lines) > 2:
+            return " ".join(lines[2:])
+        return ""

@@ -1,48 +1,74 @@
 {% extends 'base/base.html' %}
+{% load static %}
 
 {% block title %}Import Proposal - Consulting Manager{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Import Proposal for {{ project.title }}</h5>
+                    <h5 class="card-title mb-0">Import Proposal PDF</h5>
                 </div>
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
-                        <div class="mb-4">
-                            <p class="text-muted">
-                                Upload a PDF file containing the proposal. The system will attempt to extract the following information:
-                            </p>
-                            <ul class="text-muted">
-                                <li>Date</li>
-                                <li>Recipient details</li>
-                                <li>Subject and reference</li>
-                                <li>Basic and additional services</li>
-                                <li>Compensation details</li>
-                                <li>Terms and conditions</li>
-                            </ul>
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="id_file" class="form-label">Proposal PDF File</label>
+                            <input type="file" class="form-control {% if form.file.errors %}is-invalid{% endif %}" 
+                                   id="id_file" name="file" accept=".pdf" required>
+                            {% if form.file.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.file.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Upload a PDF file containing the proposal document.</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="{{ form.pdf_file.id_for_label }}" class="form-label">{{ form.pdf_file.label }}</label>
-                            {{ form.pdf_file }}
-                            {% if form.pdf_file.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.pdf_file.errors }}
+                            <label for="id_title" class="form-label">Proposal Title</label>
+                            <input type="text" class="form-control {% if form.title.errors %}is-invalid{% endif %}" 
+                                   id="id_title" name="title" value="{{ form.title.value|default:'' }}" required>
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.title.errors %}
+                                    {{ error }}
+                                {% endfor %}
                             </div>
                             {% endif %}
-                            <div class="form-text">{{ form.pdf_file.help_text }}</div>
                         </div>
 
-                        <div class="d-flex justify-content-end gap-2">
-                            <a href="{% url 'projects:project-detail' project.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label">Description</label>
+                            <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                      id="id_description" name="description" rows="3">{{ form.description.value|default:'' }}</textarea>
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'projects:project-detail' project.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Project
+                            </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-file-upload"></i> Import Proposal
+                                <i class="fas fa-file-import"></i> Import Proposal
                             </button>
                         </div>
                     </form>
@@ -55,21 +81,19 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
-    (function () {
-        'use strict'
-        var forms = document.querySelectorAll('.needs-validation')
-        Array.prototype.slice.call(forms).forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                if (!form.checkValidity()) {
-                    event.preventDefault()
-                    event.stopPropagation()
-                }
-                form.classList.add('was-validated')
-            }, false)
-        })
-    })()
-});
+// Form validation
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
 </script>
 {% endblock %} 

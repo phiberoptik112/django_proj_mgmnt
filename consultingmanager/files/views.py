@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, FormView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, FormView, View
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -10,7 +10,11 @@ from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm, Proposa
 from .tasks import analyze_project_metadata
 from projects.models import Project
 from .utils.proposal_parser import ProposalParser
+import tempfile
 import os
+import uuid
+from django.conf import settings
+
 # Create your views here.
 
 class RoomAcousticsCreateView(LoginRequiredMixin, CreateView):
@@ -176,57 +180,84 @@ class ProposalDetailView(LoginRequiredMixin, DetailView):
         context['project'] = self.object.project
         return context
 
-class ProposalImportView(LoginRequiredMixin, FormView):
-    form_class = ProposalImportForm
+class ProposalImportView(LoginRequiredMixin, View):
     template_name = 'files/proposal_import.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['project'] = get_object_or_404(Project, pk=self.kwargs['project_id'])
-        return context
-    
-    def form_valid(self, form):
-        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
-        pdf_file = form.cleaned_data['pdf_file']
+    form_class = ProposalImportForm
+
+    def store_temp_proposal(self, pdf_file, prefix='proposal_'):
+        """Store uploaded proposal temporarily"""
+        os.makedirs(settings.TEMP_PROPOSAL_STORAGE, exist_ok=True)
         
-        try:
-            # Save the uploaded file temporarily
-            temp_path = os.path.join('/tmp', pdf_file.name)
-            with open(temp_path, 'wb+') as destination:
-                for chunk in pdf_file.chunks():
-                    destination.write(chunk)
-            
-            # Extract text from PDF
-            text = extract_text_from_pdf(temp_path)
-            
-            # Parse the proposal text
-            proposal_data = parse_proposal_text(text)
-            
-            # Create the proposal
-            proposal = Proposal.objects.create(
-                project=project,
-                date=proposal_data.get('date'),
-                recipient_name=proposal_data.get('recipient_name'),
-                recipient_company=proposal_data.get('recipient_company'),
-                recipient_address=proposal_data.get('recipient_address'),
-                subject=proposal_data.get('subject', 'Imported Proposal'),
-                introduction=proposal_data.get('introduction', ''),
-                basic_services=proposal_data.get('basic_services', []),
-                additional_services=proposal_data.get('additional_services', []),
-                compensation=proposal_data.get('compensation', {}),
-                terms=proposal_data.get('terms', ''),
-                status='draft'
-            )
-            
-            # Clean up temporary file
-            os.remove(temp_path)
-            
-            messages.success(self.request, 'Proposal imported successfully.')
-            return redirect('files:proposal-detail', pk=proposal.pk)
-            
-        except Exception as e:
-            messages.error(self.request, f'Error importing proposal: {str(e)}')
-            return self.form_invalid(form)
+        # Generate unique filename
+        filename = f"{prefix}{uuid.uuid4().hex}{os.path.splitext(pdf_file.name)[1]}"
+        filepath = os.path.join(settings.TEMP_PROPOSAL_STORAGE, filename)
+        
+        with open(filepath, 'wb+') as destination:
+            for chunk in pdf_file.chunks():
+                destination.write(chunk)
+        
+        return filepath
+
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, pk=project_id)
+        form = self.form_class()
+        return render(request, self.template_name, {
+            'form': form,
+            'project': project
+        })
+
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, pk=project_id)
+        form = self.form_class(request.POST, request.FILES)
+        
+        if form.is_valid():
+            try:
+                # Save the uploaded file temporarily
+                uploaded_file = request.FILES['file']
+                temp_path = self.store_temp_proposal(uploaded_file)
+
+                # Parse the proposal
+                parser = ProposalParser(temp_path)
+                proposal_data = parser.parse()
+                
+                # Check for duplicates
+                is_duplicate, existing_proposal, file_hash = parser.check_duplicate_by_hash(project_id)
+                if is_duplicate:
+                    messages.warning(request, f'This proposal appears to be a duplicate of an existing proposal.')
+                    os.remove(temp_path)
+                    return redirect('projects:project-detail', pk=project_id)
+
+                # Create the proposal
+                proposal = Proposal.objects.create(
+                    project=project,
+                    title=form.cleaned_data['title'],
+                    description=form.cleaned_data['description'],
+                    file=uploaded_file,
+                    **proposal_data
+                )
+
+                # Store file hash
+                parser.store_file_hash(proposal, uploaded_file.name)
+
+                # Clean up temporary file
+                os.remove(temp_path)
+
+                messages.success(request, 'Proposal imported successfully.')
+                return redirect('projects:project-detail', pk=project_id)
+
+            except Exception as e:
+                messages.error(request, f'Error importing proposal: {str(e)}')
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return render(request, self.template_name, {
+                    'form': form,
+                    'project': project
+                })
+
+        return render(request, self.template_name, {
+            'form': form,
+            'project': project
+        })
 
 @login_required
 def analyze_metadata(request, pk):

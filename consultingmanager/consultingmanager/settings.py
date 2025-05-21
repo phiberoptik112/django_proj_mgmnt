@@ -31,6 +31,14 @@ ALLOWED_HOSTS = []
 # Path to the projects directory
 PROJECTS_BASE_PATH = os.environ.get('PROJECTS_BASE_PATH', str(BASE_DIR / 'projects_data'))
 
+# Media files
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# Temp proposal storage path
+TEMP_PROPOSAL_STORAGE = os.path.join(MEDIA_ROOT, 'temp_proposals')
+
+
 
 # Application definition
 
@@ -140,10 +148,6 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# Media files
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

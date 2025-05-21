@@ -86,17 +86,28 @@ class ProposalForm(forms.ModelForm):
         exclude = ['project']
 
 class ProposalImportForm(forms.Form):
-    pdf_file = forms.FileField(
-        label='Proposal PDF',
-        help_text='Upload a PDF file containing the proposal',
+    file = forms.FileField(
+        label='Proposal PDF File',
+        help_text='Upload a PDF file containing the proposal document.',
         widget=forms.FileInput(attrs={'accept': '.pdf'})
     )
+    title = forms.CharField(
+        label='Proposal Title',
+        max_length=200,
+        required=True,
+        widget=forms.TextInput(attrs={'placeholder': 'Enter a title for this proposal'})
+    )
+    description = forms.CharField(
+        label='Description',
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter a description for this proposal'})
+    )
 
-    def clean_pdf_file(self):
-        pdf_file = self.cleaned_data.get('pdf_file')
-        if pdf_file:
-            if not pdf_file.name.endswith('.pdf'):
+    def clean_file(self):
+        file = self.cleaned_data.get('file')
+        if file:
+            if not file.name.endswith('.pdf'):
                 raise forms.ValidationError('Only PDF files are allowed.')
-            if pdf_file.size > 10 * 1024 * 1024:  # 10MB limit
-                raise forms.ValidationError('File size must be under 10MB.')
-        return pdf_file
+            if file.size > 10 * 1024 * 1024:  # 10MB limit
+                raise forms.ValidationError('File size must be less than 10MB.')
+        return file
