@@ -230,9 +230,7 @@ class ProposalImportView(LoginRequiredMixin, View):
                 # Create the proposal
                 proposal = Proposal.objects.create(
                     project=project,
-                    title=form.cleaned_data['title'],
-                    description=form.cleaned_data['description'],
-                    file=uploaded_file,
+                    attachments=uploaded_file,
                     **proposal_data
                 )
 

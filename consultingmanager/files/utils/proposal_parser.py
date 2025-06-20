@@ -67,14 +67,11 @@ class ProposalParser:
             "recipient_name": self._extract_recipient_name(),
             "recipient_company": self._extract_recipient_company(),
             "recipient_address": self._extract_recipient_address(),
-            # "subject": self._extract_subject(),
-            # "reference": self._extract_reference(),
-            "introduction": self._extract_introduction(),
+            # "introduction": self._extract_introduction(),
             "basic_services": self._extract_basic_services(),
             "additional_services": self._extract_additional_services(),
             "compensation": self._extract_compensation(),
-            "terms": self._extract_terms(),
-            "attachments": self._extract_attachments()
+            # "attachments": self._extract_attachments()
         }
         return self.extracted_data
     def _extract_date(self):
@@ -104,14 +101,14 @@ class ProposalParser:
     
     def _extract_section(self, text, start_heading, end_heading=None):
         """Extract a section of text between headings."""
-        start_pattern = r'(?i)' + re.escape(start_heading) + r'\s*'
+        start_pattern = re.escape(start_heading) + r'\s*'
         if end_heading:
-            end_pattern = r'(?i)' + re.escape(end_heading) + r'\s*'
+            end_pattern = re.escape(end_heading) + r'\s*'
             pattern = f"{start_pattern}(.*?){end_pattern}"
         else:
-            pattern = f"{start_pattern}(.*?)(?:$|(?i)(?:{self._get_all_headings_pattern()}))"
+            pattern = f"{start_pattern}(.*?)(?:$|(?:{self._get_all_headings_pattern()}))"
         self.logger.info(f"Extracting section with pattern: {pattern}")
-        match = re.search(pattern, self.text, re.DOTALL)
+        match = re.search(pattern, self.text, re.DOTALL | re.IGNORECASE)
         return match.group(1).strip() if match else ""
 
     def _get_all_headings_pattern(self):
@@ -259,14 +256,11 @@ class ProposalParser:
             "recipient_name": self.extracted_data["recipient_name"],
             "recipient_company": self.extracted_data["recipient_company"], 
             "recipient_address": self.extracted_data["recipient_address"],
-            # "subject": self.extracted_data["subject"],
-            # "reference": self.extracted_data["reference"],
-            "introduction": self.extracted_data["introduction"],
+            # "introduction": self.extracted_data["introduction"],
             "basic_services": json.dumps(basic_services),
             "additional_services": self.extracted_data["additional_services"],
             "compensation": self.extracted_data["compensation"],
-            "terms": self.extracted_data["terms"],
-            "attachments": self.extracted_data["attachments"],
+            # "attachments": self.extracted_data["attachments"],
             "status": "draft",
             "created_at": datetime.now(),
             "updated_at": datetime.now()

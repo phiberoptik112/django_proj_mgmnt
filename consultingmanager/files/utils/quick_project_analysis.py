@@ -235,6 +235,13 @@ def analyze_scope_of_work(project_paths: List[str]) -> pd.DataFrame:
                                 for item in service_items:
                                     scope_info = {
                                         'project_path': project_path,
+                                        'source_file': filename,
+                                        'scope_item': item,
+                                        'category': 'additional_services'
+                                    }
+                                    all_scopes.append(scope_info)
+                            else:
+                                logger.debug("No additional services section found in document")
                             if scope_match:
                                 logger.debug("Found scope of work section")
                                 scope_text = scope_match.group(1).strip()
