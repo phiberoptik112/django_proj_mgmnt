@@ -31,6 +31,14 @@ ALLOWED_HOSTS = []
 # Path to the projects directory
 PROJECTS_BASE_PATH = os.environ.get('PROJECTS_BASE_PATH', str(BASE_DIR / 'projects_data'))
 
+# Media files
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# Temp proposal storage path
+TEMP_PROPOSAL_STORAGE = os.path.join(MEDIA_ROOT, 'temp_proposals')
+
+
 
 # Application definition
 
@@ -41,6 +49,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party apps
+    "crispy_forms",
+    "crispy_bootstrap5",
+    "debug_toolbar",
     # Custom apps
     "clients.apps.ClientsConfig",
     "projects.apps.ProjectsConfig",
@@ -58,6 +70,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = "consultingmanager.urls"
@@ -72,6 +85,11 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.static",
+                "django.template.context_processors.media",
+            ],
+            "builtins": [
+                "django.templatetags.static",
             ],
         },
     },
@@ -131,10 +149,6 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Media files
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -144,3 +158,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
+
+# Crispy Forms Settings
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]

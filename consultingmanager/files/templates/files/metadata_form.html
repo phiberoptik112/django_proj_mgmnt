@@ -1,0 +1,35 @@
+{% extends "files/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block files_title %}
+    {% if form.instance.pk %}
+        Edit Project Metadata
+    {% else %}
+        Add Project Metadata
+    {% endif %}
+{% endblock %}
+
+{% block files_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            {% if form.instance.pk %}
+                                Update
+                            {% else %}
+                                Create
+                            {% endif %}
+                        </button>
+                        <a href="{% url 'files:file-list' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

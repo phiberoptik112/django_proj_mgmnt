@@ -1,0 +1,104 @@
+File listing for project: /Users/jakepfitsch_home/Documents/sample_project_databaseWork/Project_1_Acoustic_Design
+Generated on: 2025-06-20 02:57:42
+--------------------------------------------------------------------------------
+
+📁 Project_1_Acoustic_Design/
+  📄 .DS_Store
+
+📁 deliverables_db/
+  📄 installation_supervision_reports.txt
+  📄 astm_test_reports.txt
+  📄 rfi_review_documents.txt
+  📄 final_report.txt
+  📄 presentation.pptx
+  📄 site_survey_report.txt
+  📄 acoustic_modeling_results.txt
+
+📁 equipment_spaces_db/
+  📄 open_office_spaces.txt
+  📄 testing_laboratories.txt
+  📄 vav_box_sound_data.txt
+  📄 emergency_generator_sound_data.txt
+  📄 duct_silencer_sound_data.txt
+  📄 space_requirements.txt
+  📄 conference_rooms.txt
+  📄 ahu_sound_data.txt
+  📄 equipment_list.csv
+
+📁 astm_tests_db/
+  📄 test_results_001.txt
+  📄 generate_test_data.py
+
+  📁 raw_data/
+    📄 README.md
+    📄 test_001.csv
+
+    📁 astc_tests/
+      📄 astc_test_003_data_2.csv
+      📄 astc_test_003_data_3.csv
+      📄 astc_test_003_data_1.csv
+      📄 astc_test_003_data_4.csv
+      📄 astc_test_001_data_3.csv
+      📄 astc_test_001_data_2.csv
+      📄 astc_test_004_data_4.csv
+      📄 astc_test_001_data_1.csv
+      📄 astc_test_004_data_1.csv
+      📄 astc_test_001_data_4.csv
+      📄 astc_test_004_data_3.csv
+      📄 astc_test_004_data_2.csv
+      📄 astc_test_002_data_4.csv
+      📄 astc_test_002_data_2.csv
+      📄 astc_test_002_data_3.csv
+      📄 astc_test_002_data_1.csv
+      📄 astc_test_005_data_1.csv
+      📄 astc_test_005_data_3.csv
+      📄 astc_test_005_data_2.csv
+      📄 astc_test_005_data_4.csv
+
+    📁 aiic_tests/
+      📄 aiic_test_004_data_1.csv
+      📄 aiic_test_001_data_4.csv
+      📄 aiic_test_004_data_3.csv
+      📄 aiic_test_004_data_2.csv
+      📄 aiic_test_001_data_3.csv
+      📄 aiic_test_001_data_2.csv
+      📄 aiic_test_004_data_4.csv
+      📄 aiic_test_001_data_1.csv
+      📄 aiic_test_003_data_4.csv
+      📄 aiic_test_003_data_2.csv
+      📄 aiic_test_003_data_3.csv
+      📄 aiic_test_003_data_1.csv
+      📄 aiic_test_005_data_4.csv
+      📄 aiic_test_005_data_1.csv
+      📄 aiic_test_005_data_3.csv
+      📄 aiic_test_005_data_2.csv
+      📄 aiic_test_002_data_2.csv
+      📄 aiic_test_002_data_3.csv
+      📄 aiic_test_002_data_1.csv
+      📄 aiic_test_002_data_4.csv
+
+📁 email_db/
+  📄 billing_correspondence.txt
+  📄 testing_logistics.txt
+  📄 client_correspondence.txt
+  📄 team_meetings.txt
+  📄 acoustic_treatment_specs.txt
+  📄 mechanical_equipment_specs.txt
+  📄 test_results_feedback.txt
+  📄 proposal_negotiations.txt
+
+📁 acoustic_materials_db/
+  📄 ceiling_materials.txt
+  📄 nrc_ratings.csv
+  📄 floor_materials.txt
+  📄 material_specs.txt
+  📄 wall_treatments.txt
+  📄 material_test_data.csv
+
+📁 budget/
+  📄 project_budget.xlsx
+  📄 scope_of_work.txt
+  📄 project_budget.md
+  📄 deliverables_list.md
+  📄 scope_of_work.md
+
