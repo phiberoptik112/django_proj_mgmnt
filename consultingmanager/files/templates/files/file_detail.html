@@ -1,0 +1,80 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ file.title }} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <!-- File Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1>{{ file.title }}</h1>
+                    <p class="text-muted">
+                        Project: <a href="{% url 'projects:project-detail' file.project.pk %}">{{ file.project.title }}</a>
+                        <span class="mx-2">|</span>
+                        Type: <span class="badge bg-secondary">{{ file.get_file_type_display }}</span>
+                    </p>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'files:file-update' file.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit File
+                    </a>
+                    <a href="{% url 'files:file-delete' file.pk %}" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete File
+                    </a>
+                </div>
+            </div>
+
+            <!-- File Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">File Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Description</dt>
+                        <dd class="col-sm-9">{{ file.description|linebreaks|default:"No description provided" }}</dd>
+
+                        <dt class="col-sm-3">Uploaded</dt>
+                        <dd class="col-sm-9">{{ file.uploaded_at|date:"F j, Y H:i" }}</dd>
+
+                        <dt class="col-sm-3">Last Modified</dt>
+                        <dd class="col-sm-9">{{ file.updated_at|date:"F j, Y H:i" }}</dd>
+
+                        <dt class="col-sm-3">File Size</dt>
+                        <dd class="col-sm-9">{{ file.file.size|filesizeformat }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- File Preview Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">File Preview</h5>
+                </div>
+                <div class="card-body">
+                    {% if file.file_type == 'image' %}
+                        <img src="{{ file.file.url }}" alt="{{ file.title }}" class="img-fluid">
+                    {% elif file.file_type == 'document' %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-file-alt"></i> Document preview not available
+                            <a href="{{ file.file.url }}" class="btn btn-primary btn-sm float-end" target="_blank">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-file"></i> Preview not available for this file type
+                            <a href="{{ file.file.url }}" class="btn btn-primary btn-sm float-end" target="_blank">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

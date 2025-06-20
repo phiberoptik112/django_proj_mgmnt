@@ -3,6 +3,7 @@ env/
 venv/
 ENV/
 new_env/
+debug_env/
 .venv/
 
 # Python bytecode

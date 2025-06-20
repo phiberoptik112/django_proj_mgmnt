@@ -1,0 +1,70 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Proposals - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Proposals</h1>
+        <a href="{% url 'files:proposal-create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Proposal
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Recipient</th>
+                            <th>Company</th>
+                            <th>Subject</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proposal in proposals %}
+                        <tr>
+                            <td>{{ proposal.date|date:"M d, Y" }}</td>
+                            <td>{{ proposal.recipient_name }}</td>
+                            <td>{{ proposal.recipient_company }}</td>
+                            <td>{{ proposal.subject }}</td>
+                            <td>
+                                <span class="badge {% if proposal.status == 'accepted' %}bg-success
+                                                 {% elif proposal.status == 'sent' %}bg-primary
+                                                 {% else %}bg-secondary{% endif %}">
+                                    {{ proposal.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'files:proposal-detail' proposal.pk %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'files:proposal-update' proposal.pk %}" 
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'files:proposal-delete' proposal.pk %}" 
+                                       class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No proposals found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

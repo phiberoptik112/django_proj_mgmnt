@@ -1,0 +1,129 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ client.name }} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Client Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>{{ client.name }}</h1>
+            {% if client.company %}
+            <p class="text-muted mb-0">{{ client.company }}</p>
+            {% endif %}
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'clients:client-update' client.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit Client
+            </a>
+            <a href="{% url 'projects:project-create' %}?client={{ client.pk }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Project
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Client Information -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">
+                            <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+                        </dd>
+
+                        <dt class="col-sm-4">Phone</dt>
+                        <dd class="col-sm-8">{{ client.phone|default:"Not provided" }}</dd>
+
+                        <dt class="col-sm-4">Created</dt>
+                        <dd class="col-sm-8">{{ client.created_at|date:"F j, Y" }}</dd>
+
+                        <dt class="col-sm-4">Updated</dt>
+                        <dd class="col-sm-8">{{ client.updated_at|date:"F j, Y" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Projects -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Projects</h5>
+                </div>
+                <div class="card-body">
+                    {% if client.project_set.exists %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Status</th>
+                                        <th>Start Date</th>
+                                        <th>Budget</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for project in client.project_set.all %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'projects:project-detail' project.pk %}">
+                                                {{ project.title }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if project.status == 'completed' %}bg-success
+                                                             {% elif project.status == 'in_progress' %}bg-primary
+                                                             {% elif project.status == 'planning' %}bg-info
+                                                             {% elif project.status == 'on_hold' %}bg-warning
+                                                             {% else %}bg-danger{% endif %}">
+                                                {{ project.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ project.start_date|date:"M d, Y" }}</td>
+                                        <td>${{ project.budget|default:"0.00" }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'projects:project-detail' project.pk %}" 
+                                                   class="btn btn-info" title="View">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'projects:project-update' project.pk %}" 
+                                                   class="btn btn-warning" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No projects found for this client.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes or Additional Information -->
+        {% if client.notes %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Notes</h5>
+                </div>
+                <div class="card-body">
+                    {{ client.notes|linebreaks }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 
