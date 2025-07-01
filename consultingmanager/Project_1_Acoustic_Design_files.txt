@@ -1,16 +1,16 @@
 File listing for project: /Users/jakepfitsch_home/Documents/sample_project_databaseWork/Project_1_Acoustic_Design
-Generated on: 2025-06-20 02:57:42
+Generated on: 2025-06-29 23:01:57
 --------------------------------------------------------------------------------
 
 📁 Project_1_Acoustic_Design/
   📄 .DS_Store
+  📄 README.md
+  📄 PROJECT_STRUCTURE_SUMMARY.md
 
 📁 deliverables_db/
   📄 installation_supervision_reports.txt
   📄 astm_test_reports.txt
   📄 rfi_review_documents.txt
-  📄 final_report.txt
-  📄 presentation.pptx
   📄 site_survey_report.txt
   📄 acoustic_modeling_results.txt
 
@@ -25,9 +25,19 @@ Generated on: 2025-06-20 02:57:42
   📄 ahu_sound_data.txt
   📄 equipment_list.csv
 
+📁 regulatory_compliance/
+  📄 astm_compliance_standards.md
+
+📁 technical_documentation/
+  📄 software_requirements_specification.md
+  📄 system_architecture.md
+
+📁 team_resources/
+
 📁 astm_tests_db/
   📄 test_results_001.txt
   📄 generate_test_data.py
+  📄 .DS_Store
 
   📁 raw_data/
     📄 README.md
@@ -77,6 +87,26 @@ Generated on: 2025-06-20 02:57:42
       📄 aiic_test_002_data_1.csv
       📄 aiic_test_002_data_4.csv
 
+📁 project_management/
+  📄 risk_register.md
+  📄 project_schedule.md
+  📄 project_charter.md
+
+📁 archives/
+
+📁 software_development/
+
+  📁 tests/
+    📄 test_acoustic_calculator.py
+
+  📁 src/
+
+    📁 acoustic_engine/
+      📄 acoustic_calculator.py
+
+📁 financial_management/
+  📄 project_financial_analysis.md
+
 📁 email_db/
   📄 billing_correspondence.txt
   📄 testing_logistics.txt
@@ -86,6 +116,15 @@ Generated on: 2025-06-20 02:57:42
   📄 mechanical_equipment_specs.txt
   📄 test_results_feedback.txt
   📄 proposal_negotiations.txt
+
+📁 client_communication/
+  📄 proposal_acoustic_software.md
+
+📁 quality_assurance/
+  📄 qa_test_plan.md
+
+📁 marketing_business_development/
+  📄 marketing_strategy.md
 
 📁 acoustic_materials_db/
   📄 ceiling_materials.txt
@@ -97,7 +136,6 @@ Generated on: 2025-06-20 02:57:42
 
 📁 budget/
   📄 project_budget.xlsx
-  📄 scope_of_work.txt
   📄 project_budget.md
   📄 deliverables_list.md
   📄 scope_of_work.md

@@ -1,0 +1,359 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Consulting Manager{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" rel="stylesheet">
+<style>
+.timeline-container {
+    overflow-x: auto;
+    max-height: 600px;
+}
+.project-row {
+    height: 40px;
+    position: relative;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+}
+.project-bar {
+    height: 20px;
+    border-radius: 10px;
+    position: relative;
+    margin: 0 5px;
+}
+.status-planning { background-color: #6c757d; }
+.status-in_progress { background-color: #007bff; }
+.status-on_hold { background-color: #ffc107; }
+.status-completed { background-color: #28a745; }
+.status-cancelled { background-color: #dc3545; }
+
+.file-activity-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #17a2b8;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.billing-activity-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #28a745;
+    border-radius: 50%;
+    position: absolute;
+    top: 25%;
+    transform: translateY(-50%);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Project Dashboard</h1>
+        <div class="d-flex gap-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>{{ total_projects }}</h3>
+                    <small>Total Projects</small>
+                </div>
+            </div>
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>{{ active_projects }}</h3>
+                    <small>Active Projects</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Status Summary -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Project Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Overview -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Budget vs Billed Overview</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="budgetChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline View -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Project Timeline</h5>
+            <div class="legend d-flex gap-3">
+                <span><i class="fas fa-circle text-info"></i> File Activity</span>
+                <span><i class="fas fa-circle text-success"></i> Billing Activity</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="timeline-container">
+                <div id="timelineChart" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Activity Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>File Activity Over Time</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="fileActivityChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Projects Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Project Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Client</th>
+                            <th>Status</th>
+                            <th>Budget</th>
+                            <th>Billed</th>
+                            <th>Budget Usage</th>
+                            <th>Files</th>
+                            <th>Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'projects:project-detail' project.pk %}">
+                                    {{ project.title }}
+                                </a>
+                            </td>
+                            <td>{{ project.client.name }}</td>
+                            <td>
+                                <span class="badge bg-{% if project.status == 'completed' %}success
+                                                     {% elif project.status == 'in_progress' %}primary
+                                                     {% elif project.status == 'planning' %}info
+                                                     {% elif project.status == 'on_hold' %}warning
+                                                     {% else %}danger{% endif %}">
+                                    {{ project.get_status_display }}
+                                </span>
+                            </td>
+                            <td>${{ project.budget|default:"0"|floatformat:0 }}</td>
+                            <td>${{ project.billing_details.all|default:"0"|floatformat:0 }}</td>
+                            <td>
+                                {% if project.budget %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                            0%
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>{{ project.files.count }}</td>
+                            <td>{{ project.updated_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+{{ timeline_data|json_script:"timeline-data" }}
+{{ budget_data|json_script:"budget-data" }}
+{{ file_activity_data|json_script:"file-activity-data" }}
+{{ status_labels|json_script:"status-labels" }}
+{{ status_counts|json_script:"status-counts" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get data from Django
+    const timelineData = JSON.parse(document.getElementById('timeline-data').textContent);
+    const budgetData = JSON.parse(document.getElementById('budget-data').textContent);
+    const fileActivityData = JSON.parse(document.getElementById('file-activity-data').textContent);
+
+    // Status Distribution Chart
+    const statusLabels = JSON.parse(document.getElementById('status-labels').textContent);
+    const statusCounts = JSON.parse(document.getElementById('status-counts').textContent);
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusCounts,
+                backgroundColor: [
+                    '#007bff', '#28a745', '#ffc107', '#6c757d', '#dc3545'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Budget Chart
+    const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+    new Chart(budgetCtx, {
+        type: 'bar',
+        data: {
+            labels: budgetData.map(p => p.title),
+            datasets: [{
+                label: 'Budget',
+                data: budgetData.map(p => p.budget),
+                backgroundColor: 'rgba(54, 162, 235, 0.8)'
+            }, {
+                label: 'Billed',
+                data: budgetData.map(p => p.billed),
+                backgroundColor: 'rgba(75, 192, 192, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // File Activity Chart
+    const fileActivityCtx = document.getElementById('fileActivityChart').getContext('2d');
+    
+    // Process file activity data for time series
+    const fileActivityByWeek = {};
+    fileActivityData.forEach(item => {
+        if (item.week) {
+            if (!fileActivityByWeek[item.week]) {
+                fileActivityByWeek[item.week] = 0;
+            }
+            fileActivityByWeek[item.week] += item.file_count;
+        }
+    });
+
+    new Chart(fileActivityCtx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(fileActivityByWeek).sort(),
+            datasets: [{
+                label: 'Files Uploaded',
+                data: Object.values(fileActivityByWeek),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'week'
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Simple Timeline Visualization
+    createTimelineChart(timelineData);
+});
+
+function createTimelineChart(data) {
+    const container = document.getElementById('timelineChart');
+    container.innerHTML = '';
+    
+    // Calculate date range
+    const allDates = [];
+    data.forEach(project => {
+        allDates.push(new Date(project.start_date));
+        allDates.push(new Date(project.end_date));
+    });
+    
+    const minDate = new Date(Math.min(...allDates));
+    const maxDate = new Date(Math.max(...allDates));
+    const totalDays = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+    
+    // Create timeline for each project
+    data.forEach(project => {
+        const projectDiv = document.createElement('div');
+        projectDiv.className = 'project-row';
+        
+        const startDate = new Date(project.start_date);
+        const endDate = new Date(project.end_date);
+        const projectDuration = (endDate - startDate) / (1000 * 60 * 60 * 24);
+        
+        const leftOffset = ((startDate - minDate) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+        const width = (projectDuration / totalDays) * 100;
+        
+        projectDiv.innerHTML = `
+            <div style="width: 200px; padding-right: 10px; font-size: 12px;">
+                <strong>${project.title}</strong><br>
+                <small>${project.client}</small>
+            </div>
+            <div style="flex: 1; position: relative;">
+                <div class="project-bar status-${project.status}" 
+                     style="left: ${leftOffset}%; width: ${width}%;">
+                </div>
+                ${project.file_activity.map(date => {
+                    const activityDate = new Date(date);
+                    const activityOffset = ((activityDate - minDate) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+                    return `<div class="file-activity-dot" style="left: ${activityOffset}%;"></div>`;
+                }).join('')}
+                ${project.billing_activity.map(date => {
+                    const billingDate = new Date(date);
+                    const billingOffset = ((billingDate - minDate) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+                    return `<div class="billing-activity-dot" style="left: ${billingOffset}%;"></div>`;
+                }).join('')}
+            </div>
+        `;
+        
+        container.appendChild(projectDiv);
+    });
+}
+</script>
+{% endblock %}

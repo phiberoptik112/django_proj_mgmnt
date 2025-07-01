@@ -51,7 +51,7 @@ cd consultingmanager
 2. Create and activate a virtual environment:
 ```bash
 
-source .venv/bin/activate  # On Windows: venv\Scripts\activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. Install dependencies:
