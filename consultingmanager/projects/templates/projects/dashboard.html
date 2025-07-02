@@ -52,6 +52,69 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Projects Table (Moved to Top) -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Project Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Client</th>
+                            <th>Status</th>
+                            <th>Budget</th>
+                            <th>Billed</th>
+                            <th>Budget Usage</th>
+                            <th>Files</th>
+                            <th>Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'projects:project-detail' project.pk %}">
+                                    {{ project.title }}
+                                </a>
+                            </td>
+                            <td>{{ project.client.name }}</td>
+                            <td>
+                                <span class="badge bg-{% if project.status == 'completed' %}success
+                                                     {% elif project.status == 'in_progress' %}primary
+                                                     {% elif project.status == 'planning' %}info
+                                                     {% elif project.status == 'on_hold' %}warning
+                                                     {% else %}danger{% endif %}">
+                                    {{ project.get_status_display }}
+                                </span>
+                            </td>
+                            <td>${{ project.budget|default:"0"|floatformat:0 }}</td>
+                            <td>${{ project.billing_details.all|default:"0"|floatformat:0 }}</td>
+                            <td>
+                                {% if project.budget %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                            0%
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>{{ project.files.count }}</td>
+                            <td>{{ project.updated_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- End Projects Table -->
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Project Dashboard</h1>
         <div class="d-flex gap-3">
@@ -119,68 +182,6 @@
         </div>
         <div class="card-body">
             <canvas id="fileActivityChart" height="200"></canvas>
-        </div>
-    </div>
-
-    <!-- Projects Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5>Project Summary</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Project</th>
-                            <th>Client</th>
-                            <th>Status</th>
-                            <th>Budget</th>
-                            <th>Billed</th>
-                            <th>Budget Usage</th>
-                            <th>Files</th>
-                            <th>Last Activity</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for project in projects %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'projects:project-detail' project.pk %}">
-                                    {{ project.title }}
-                                </a>
-                            </td>
-                            <td>{{ project.client.name }}</td>
-                            <td>
-                                <span class="badge bg-{% if project.status == 'completed' %}success
-                                                     {% elif project.status == 'in_progress' %}primary
-                                                     {% elif project.status == 'planning' %}info
-                                                     {% elif project.status == 'on_hold' %}warning
-                                                     {% else %}danger{% endif %}">
-                                    {{ project.get_status_display }}
-                                </span>
-                            </td>
-                            <td>${{ project.budget|default:"0"|floatformat:0 }}</td>
-                            <td>${{ project.billing_details.all|default:"0"|floatformat:0 }}</td>
-                            <td>
-                                {% if project.budget %}
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar" role="progressbar" 
-                                             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                            0%
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td>{{ project.files.count }}</td>
-                            <td>{{ project.updated_at|date:"M d, Y" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
 </div>

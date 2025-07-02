@@ -2,12 +2,14 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse_lazy
+from django.db.models.functions import TruncWeek
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from datetime import timedelta, datetime
 from .models import Project
 from .forms import ProjectForm
 from django.contrib.auth.mixins import LoginRequiredMixin
+from files.models import File
 import json
 
 # Create your views here.
@@ -180,7 +182,7 @@ class ProjectDashboardView(LoginRequiredMixin, TemplateView):
     def get_file_activity_data(self, projects):
         """Get file activity over time"""
         # Group file uploads by week/month
-        from django.db.models import TruncWeek
+
         
         file_activity = []
         
@@ -189,8 +191,8 @@ class ProjectDashboardView(LoginRequiredMixin, TemplateView):
         
         weekly_uploads = File.objects.filter(
             uploaded_at__gte=six_months_ago
-        ).extra(
-            select={'week': "date_trunc('week', uploaded_at)"}
+        ).annotate(
+            week=TruncWeek('uploaded_at')
         ).values('week', 'project__title').annotate(
             count=Count('id')
         ).order_by('week')

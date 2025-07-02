@@ -34,6 +34,10 @@
                         <a class="nav-link {% if request.resolver_match.app_name == 'files' %}active{% endif %}" 
                            href="{% url 'files:file-list' %}">Files</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'project-dashboard' %}active{% endif %}" 
+                           href="{% url 'projects:project-dashboard' %}">Dashboard</a>
+                    </li>
                 </ul>
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav ms-auto">
