@@ -11,6 +11,14 @@ from .forms import ProjectForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from files.models import File
 import json
+from django.views.decorators.http import require_GET
+from django.utils.dateformat import DateFormat
+from django.utils.formats import get_format
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Sum
+from django.http import JsonResponse
+from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm
+from .models import ProjectPhase, PhaseWorkLog, Milestone
 
 # Create your views here.
 
@@ -110,12 +118,12 @@ class ProjectDashboardView(LoginRequiredMixin, TemplateView):
         
         context.update({
             'projects': projects,
-            'timeline_data': json.dumps(timeline_data),
-            'budget_data': json.dumps(budget_data),
-            'file_activity_data': json.dumps(file_activity),
+            'timeline_data': timeline_data,
+            'budget_data': budget_data,
+            'file_activity_data': file_activity,
             'status_summary': status_summary,
-            'status_labels': json.dumps(status_labels),
-            'status_counts': json.dumps(status_counts),
+            'status_labels': status_labels,
+            'status_counts': status_counts,
             'total_projects': projects.count(),
             'active_projects': projects.filter(
                 status__in=['planning', 'in_progress']
@@ -205,3 +213,99 @@ class ProjectDashboardView(LoginRequiredMixin, TemplateView):
             })
             
         return file_activity
+
+@require_GET
+def dashboard_project_details(request, project_id):
+    """Return project details as JSON for dashboard interactivity."""
+    from files.models import File
+    try:
+        from billing.models import BillingDetail
+    except ImportError:
+        BillingDetail = None
+    from django.apps import apps
+    Project = apps.get_model('projects', 'Project')
+    project = get_object_or_404(Project, pk=project_id)
+
+    # Status chart (single project)
+    status_labels = [project.get_status_display()]
+    status_counts = [1]
+
+    # Budget and billed
+    budget = project.budget or 0
+    # If billing details are related, sum billed for this project
+    billed = 0
+    if hasattr(project, 'billing_details'):
+        billed = project.billing_details.aggregate(total=Sum('amount'))['total'] or 0
+    budget_data = [{
+        'title': project.title,
+        'budget': float(budget),
+        'billed': float(billed),
+    }]
+
+    # Timeline data (single project)
+    timeline_data = [{
+        'title': project.title,
+        'client': project.client.name if hasattr(project, 'client') else '',
+        'status': project.status,
+        'start_date': project.start_date.isoformat() if hasattr(project, 'start_date') and project.start_date else '',
+        'end_date': project.end_date.isoformat() if hasattr(project, 'end_date') and project.end_date else '',
+        'file_activity': list(File.objects.filter(project=project).order_by('uploaded_at').values_list('uploaded_at', flat=True)),
+        'billing_activity': list(getattr(project, 'billing_details', []).values_list('date', flat=True)) if hasattr(project, 'billing_details') else [],
+    }]
+
+    # File activity data (by week)
+    file_qs = File.objects.filter(project=project)
+    file_activity_data = []
+    for f in file_qs:
+        week = f.uploaded_at.strftime('%Y-%W')
+        file_activity_data.append({'week': week, 'file_count': 1})
+
+    return JsonResponse({
+        'status_labels': status_labels,
+        'status_counts': status_counts,
+        'budget_data': budget_data,
+        'timeline_data': timeline_data,
+        'file_activity_data': file_activity_data,
+    }, encoder=DjangoJSONEncoder)
+
+class ProjectPhaseCreateView(LoginRequiredMixin, CreateView):
+    model = ProjectPhase
+    form_class = ProjectPhaseForm
+    template_name = 'projects/projectphase_form.html'
+    def get_success_url(self):
+        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+
+class ProjectPhaseUpdateView(LoginRequiredMixin, UpdateView):
+    model = ProjectPhase
+    form_class = ProjectPhaseForm
+    template_name = 'projects/projectphase_form.html'
+    def get_success_url(self):
+        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+
+class PhaseWorkLogCreateView(LoginRequiredMixin, CreateView):
+    model = PhaseWorkLog
+    form_class = PhaseWorkLogForm
+    template_name = 'projects/phaseworklog_form.html'
+    def get_success_url(self):
+        return self.object.phase.project.get_absolute_url() if hasattr(self.object.phase.project, 'get_absolute_url') else '/'
+
+class PhaseWorkLogUpdateView(LoginRequiredMixin, UpdateView):
+    model = PhaseWorkLog
+    form_class = PhaseWorkLogForm
+    template_name = 'projects/phaseworklog_form.html'
+    def get_success_url(self):
+        return self.object.phase.project.get_absolute_url() if hasattr(self.object.phase.project, 'get_absolute_url') else '/'
+
+class MilestoneCreateView(LoginRequiredMixin, CreateView):
+    model = Milestone
+    form_class = MilestoneForm
+    template_name = 'projects/milestone_form.html'
+    def get_success_url(self):
+        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+
+class MilestoneUpdateView(LoginRequiredMixin, UpdateView):
+    model = Milestone
+    form_class = MilestoneForm
+    template_name = 'projects/milestone_form.html'
+    def get_success_url(self):
+        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'

@@ -14,6 +14,10 @@ import tempfile
 import os
 import uuid
 from django.conf import settings
+from django.apps import apps
+from django.db.models import Sum
+from django.core.serializers.json import DjangoJSONEncoder
+from django.views.decorators.http import require_GET
 
 # Create your views here.
 
@@ -273,3 +277,55 @@ def metadata_detail(request, pk):
     """View project metadata details"""
     metadata = get_object_or_404(ProjectMetadata, pk=pk)
     return render(request, 'files/metadata_detail.html', {'metadata': metadata})
+
+@require_GET
+def dashboard_project_details(request, project_id):
+    """Return project details as JSON for dashboard interactivity."""
+    try:
+        from billing.models import BillingDetail
+    except ImportError:
+        BillingDetail = None
+    Project = apps.get_model('projects', 'Project')
+    project = get_object_or_404(Project, pk=project_id)
+
+    # Status chart (single project)
+    status_labels = [project.get_status_display()]
+    status_counts = [1]
+
+    # Budget and billed
+    budget = project.budget or 0
+    # If billing details are related, sum billed for this project
+    billed = 0
+    if hasattr(project, 'billing_details'):
+        billed = project.billing_details.aggregate(total=Sum('amount'))['total'] or 0
+    budget_data = [{
+        'title': project.title,
+        'budget': float(budget),
+        'billed': float(billed),
+    }]
+
+    # Timeline data (single project)
+    timeline_data = [{
+        'title': project.title,
+        'client': project.client.name if hasattr(project, 'client') else '',
+        'status': project.status,
+        'start_date': project.start_date.isoformat() if hasattr(project, 'start_date') and project.start_date else '',
+        'end_date': project.end_date.isoformat() if hasattr(project, 'end_date') and project.end_date else '',
+        'file_activity': list(File.objects.filter(project=project).order_by('uploaded_at').values_list('uploaded_at', flat=True)),
+        'billing_activity': list(getattr(project, 'billing_details', []).values_list('date', flat=True)) if hasattr(project, 'billing_details') else [],
+    }]
+
+    # File activity data (by week)
+    file_qs = File.objects.filter(project=project)
+    file_activity_data = []
+    for f in file_qs:
+        week = f.uploaded_at.strftime('%Y-%W')
+        file_activity_data.append({'week': week, 'file_count': 1})
+
+    return JsonResponse({
+        'status_labels': status_labels,
+        'status_counts': status_counts,
+        'budget_data': budget_data,
+        'timeline_data': timeline_data,
+        'file_activity_data': file_activity_data,
+    }, encoder=DjangoJSONEncoder)

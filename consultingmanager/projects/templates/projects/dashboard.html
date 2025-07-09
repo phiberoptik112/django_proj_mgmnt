@@ -74,9 +74,9 @@
                     </thead>
                     <tbody>
                         {% for project in projects %}
-                        <tr>
+                        <tr class="project-row-selectable" data-project-id="{{ project.id }}">
                             <td>
-                                <a href="{% url 'projects:project-detail' project.pk %}">
+                                <a href="{% url 'projects:project-detail' project.id %}">
                                     {{ project.title }}
                                 </a>
                             </td>
@@ -198,16 +198,34 @@
 {{ status_counts|json_script:"status-counts" }}
 
 <script>
+    console.log('script loaded');
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded fired');
     // Get data from Django
     const timelineData = JSON.parse(document.getElementById('timeline-data').textContent);
+    console.log('Parsed timelineData:', timelineData);
     const budgetData = JSON.parse(document.getElementById('budget-data').textContent);
+    console.log('Parsed budgetData:', budgetData);
     const fileActivityData = JSON.parse(document.getElementById('file-activity-data').textContent);
+    console.log('Parsed fileActivityData:', fileActivityData);
 
     // Status Distribution Chart
     const statusLabels = JSON.parse(document.getElementById('status-labels').textContent);
     const statusCounts = JSON.parse(document.getElementById('status-counts').textContent);
+    console.log('Parsed statusLabels:', statusLabels, 'statusCounts:', statusCounts);
+    if (statusLabels.length === 0) statusLabels = ['No Data'];
+    if (statusCounts.length === 0) statusCounts = [0];
+    console.log('statusChart data:', {
+        labels: statusLabels,
+        datasets: [{
+            data: statusCounts,
+            backgroundColor: [
+                '#007bff', '#28a745', '#ffc107', '#6c757d', '#dc3545'
+            ]
+        }]
+    });
     const statusCtx = document.getElementById('statusChart').getContext('2d');
+    console.log('Creating statusChart');
     new Chart(statusCtx, {
         type: 'doughnut',
         data: {
@@ -227,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Budget Chart
     const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+    console.log('Creating budgetChart');
     new Chart(budgetCtx, {
         type: 'bar',
         data: {
@@ -259,7 +278,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // File Activity Chart
     const fileActivityCtx = document.getElementById('fileActivityChart').getContext('2d');
-    
     // Process file activity data for time series
     const fileActivityByWeek = {};
     fileActivityData.forEach(item => {
@@ -270,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fileActivityByWeek[item.week] += item.file_count;
         }
     });
-
+    console.log('Creating fileActivityChart');
     new Chart(fileActivityCtx, {
         type: 'line',
         data: {
@@ -301,10 +319,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Simple Timeline Visualization
+    console.log('Creating timeline chart');
     createTimelineChart(timelineData);
+
+    // Add click event to project summary table rows
+    const tbody = document.querySelector('.table.table-hover tbody');
+    if (tbody) {
+        console.log('Attaching click event to tbody');
+        tbody.addEventListener('click', function(event) {
+            let row = event.target.closest('.project-row-selectable');
+            if (row) {
+                // Prevent navigation if clicking the link
+                if (event.target.tagName === 'A') {
+                    event.preventDefault();
+                    console.log('Prevented default link navigation');
+                }
+                alert('Row clicked');
+                // Remove highlight from all rows
+                document.querySelectorAll('.project-row-selectable').forEach(r => r.classList.remove('selected-project-row'));
+                // Highlight selected row
+                row.classList.add('selected-project-row');
+                const projectId = row.getAttribute('data-project-id');
+                console.log('Row clicked. projectId:', projectId);
+                console.log('preparing to fetch project details');
+                fetchProjectDetails(projectId);
+            }
+        });
+    } else {
+        console.log('tbody not found');
+    }
 });
 
 function createTimelineChart(data) {
+    console.log('createTimelineChart called with data:', data);
     const container = document.getElementById('timelineChart');
     container.innerHTML = '';
     
@@ -356,5 +403,141 @@ function createTimelineChart(data) {
         container.appendChild(projectDiv);
     });
 }
+
+function fetchProjectDetails(projectId) {
+    console.log('Fetching project details for projectId:', projectId);
+    fetch(`/dashboard/project-details/${projectId}/`)
+        .then(response => {
+            console.log('AJAX response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received project details data:', data);
+            // Update status chart
+            updateStatusChart(data.status_labels, data.status_counts);
+            // Update budget chart
+            updateBudgetChart(data.budget_data);
+            // Update file activity chart
+            updateFileActivityChart(data.file_activity_data);
+            // Update timeline
+            createTimelineChart(data.timeline_data);
+        })
+        .catch(error => {
+            console.error('Error fetching project details:', error);
+        });
+}
+
+// Store chart instances for dynamic updates
+let statusChartInstance = null;
+let budgetChartInstance = null;
+let fileActivityChartInstance = null;
+
+function updateStatusChart(labels, counts) {
+    console.log('updateStatusChart labels:', labels, 'counts:', counts);
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    if (statusChartInstance) statusChartInstance.destroy();
+    statusChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: counts,
+                backgroundColor: [
+                    '#007bff', '#28a745', '#ffc107', '#6c757d', '#dc3545'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+function updateBudgetChart(budgetData) {
+    console.log('updateBudgetChart budgetData:', budgetData);
+    const ctx = document.getElementById('budgetChart').getContext('2d');
+    if (budgetChartInstance) budgetChartInstance.destroy();
+    budgetChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Array.isArray(budgetData) ? budgetData.map(p => p.title) : [],
+            datasets: [{
+                label: 'Budget',
+                data: Array.isArray(budgetData) ? budgetData.map(p => p.budget) : [],
+                backgroundColor: 'rgba(54, 162, 235, 0.8)'
+            }, {
+                label: 'Billed',
+                data: Array.isArray(budgetData) ? budgetData.map(p => p.billed) : [],
+                backgroundColor: 'rgba(75, 192, 192, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateFileActivityChart(fileActivityData) {
+    console.log('updateFileActivityChart fileActivityData:', fileActivityData);
+    const ctx = document.getElementById('fileActivityChart').getContext('2d');
+    if (fileActivityChartInstance) fileActivityChartInstance.destroy();
+    // Process file activity data for time series
+    const fileActivityByWeek = {};
+    if (Array.isArray(fileActivityData)) {
+        fileActivityData.forEach(item => {
+            if (item.week) {
+                if (!fileActivityByWeek[item.week]) {
+                    fileActivityByWeek[item.week] = 0;
+                }
+                fileActivityByWeek[item.week] += item.file_count;
+            }
+        });
+    }
+    fileActivityChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(fileActivityByWeek).sort(),
+            datasets: [{
+                label: 'Files Uploaded',
+                data: Object.values(fileActivityByWeek),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'week'
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Add CSS for selected row
+const style = document.createElement('style');
+style.innerHTML = `.selected-project-row { background-color: #e3f2fd !important; }`;
+document.head.appendChild(style);
 </script>
 {% endblock %}

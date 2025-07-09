@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 
@@ -35,3 +36,58 @@ class TimeEntry(models.Model):
     description = models.TextField()
     billable = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class ProjectPhase(models.Model):
+    PHASE_STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('on_hold', 'On Hold'),
+        ('cancelled', 'Cancelled'),
+    ]
+    project = models.ForeignKey('Project', related_name='phases', on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    order = models.PositiveIntegerField(default=0)
+    percent_complete = models.FloatField(default=0)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=PHASE_STATUS_CHOICES, default='not_started')
+
+    class Meta:
+        ordering = ['project', 'order']
+        unique_together = ('project', 'order')
+
+    def __str__(self):
+        return f"{self.project.title} - {self.name}"
+
+class PhaseWorkLog(models.Model):
+    phase = models.ForeignKey(ProjectPhase, related_name='work_logs', on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True)
+    hours_worked = models.FloatField(default=0)
+    hours_invoiced = models.FloatField(default=0)
+    is_wip = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['phase', 'date']
+
+    def __str__(self):
+        return f"{self.phase} - {self.date}"
+
+class Milestone(models.Model):
+    MILESTONE_SOURCE_CHOICES = [
+        ('manual', 'Manual'),
+        ('email', 'Extracted from Email'),
+    ]
+    project = models.ForeignKey('Project', related_name='milestones', on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    due_date = models.DateField()
+    source = models.CharField(max_length=20, choices=MILESTONE_SOURCE_CHOICES, default='manual')
+    description = models.TextField(blank=True)
+    related_email = models.ForeignKey('files.Email', null=True, blank=True, on_delete=models.SET_NULL, related_name='milestone_links')
+
+    class Meta:
+        ordering = ['project', 'due_date']
+
+    def __str__(self):
+        return f"{self.project.title} - {self.name} ({self.due_date})"
