@@ -123,10 +123,29 @@
         <!-- Scope Analysis Card -->
         <div class="col-md-6 mb-4">
             <div class="card h-100">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Scope Analysis</h5>
+                    <a href="{% url 'projects:scope-add' project.pk %}" class="btn btn-sm btn-success">Add Scope Item</a>
                 </div>
                 <div class="card-body">
+                    {# Manual Scope Items #}
+                    {% if project.scope_items.all %}
+                        <div class="mb-4">
+                            <h6 class="text-muted">Manual Scope Items</h6>
+                            <div class="list-group">
+                                {% for item in project.scope_items.all %}
+                                    <a href="{% url 'projects:scope-detail' item.pk %}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong>{{ item.category }}</strong>
+                                            <small class="text-muted">{{ item.created_at|date:"M d, Y" }}</small>
+                                        </div>
+                                        <p class="mb-0 small">{{ item.description|truncatewords:20 }}</p>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    {# Existing auto scope analysis #}
                     {% if metadata.scope_analysis %}
                         {% with scope_data=metadata.scope_analysis|from_json %}
                             {% if scope_data %}
@@ -290,6 +309,76 @@
                         </ul>
                     {% else %}
                         <p class="text-muted">No proposals imported yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Phases Section -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Project Phases</h5>
+                    <a href="{% url 'projects:phase-add' project.id %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Add Phase
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if project.phases.all %}
+                        <ul class="list-group">
+                            {% for phase in project.phases.all %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ phase.name }}</strong> ({{ phase.get_status_display }}) - {{ phase.percent_complete }}%
+                                        <br>
+                                        <small>Start: {{ phase.start_date }} | End: {{ phase.end_date }}</small>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'projects:phase-edit' phase.id %}" class="btn btn-warning btn-sm">Edit</a>
+                                        <a href="{% url 'projects:worklog-add' phase.id %}" class="btn btn-success btn-sm">Add Work Log</a>
+                                    </div>
+                                </li>
+                                <!-- Work Logs for this phase -->
+                                {% for log in phase.work_logs.all %}
+                                    <li class="list-group-item ms-4">
+                                        <span>{{ log.date }}: {{ log.hours_worked }}h worked, {{ log.hours_invoiced }}h invoiced, {% if log.is_wip %}WIP{% else %}Final{% endif %}</span>
+                                        <a href="{% url 'projects:worklog-edit' log.id %}" class="btn btn-secondary btn-sm ms-2">Edit</a>
+                                    </li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No phases added yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Milestones Section -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Milestones</h5>
+                    <a href="{% url 'projects:milestone-add' project.id %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Add Milestone
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if project.milestones.all %}
+                        <ul class="list-group">
+                            {% for milestone in project.milestones.all %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ milestone.name }}</strong> ({{ milestone.due_date }}) - {{ milestone.get_source_display }}
+                                        <br>
+                                        <small>{{ milestone.description }}</small>
+                                    </div>
+                                    <a href="{% url 'projects:milestone-edit' milestone.id %}" class="btn btn-warning btn-sm">Edit</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No milestones added yet.</p>
                     {% endif %}
                 </div>
             </div>

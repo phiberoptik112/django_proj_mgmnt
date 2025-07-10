@@ -17,8 +17,8 @@ from django.utils.formats import get_format
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Sum
 from django.http import JsonResponse
-from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm
-from .models import ProjectPhase, PhaseWorkLog, Milestone
+from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm, ScopeItemForm
+from .models import ProjectPhase, PhaseWorkLog, Milestone, ScopeItem
 
 # Create your views here.
 
@@ -50,6 +50,18 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
     model = Project
     template_name = 'projects/project_detail.html'
     context_object_name = 'project'
+
+    def get_queryset(self):
+        # Prefetch phases, work logs, and milestones for this project
+        return (
+            super().get_queryset()
+            .select_related('client')
+            .prefetch_related(
+                'phases',
+                'phases__work_logs',
+                'milestones',
+            )
+        )
 
 class ProjectCreateView(LoginRequiredMixin, CreateView):
     model = Project
@@ -309,3 +321,18 @@ class MilestoneUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'projects/milestone_form.html'
     def get_success_url(self):
         return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+
+def scope_item_detail(request, pk):
+    item = get_object_or_404(ScopeItem, pk=pk)
+    return render(request, 'projects/scope_detail.html', {'item': item})
+
+def scope_item_create(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    if request.method == 'POST':
+        form = ScopeItemForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('projects:project-detail', pk=project_id)
+    else:
+        form = ScopeItemForm(initial={'project': project})
+    return render(request, 'projects/scope_form.html', {'form': form, 'project': project})

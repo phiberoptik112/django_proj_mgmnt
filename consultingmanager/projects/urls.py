@@ -24,4 +24,6 @@ urlpatterns = [
     path('worklog/<int:pk>/edit/', PhaseWorkLogUpdateView.as_view(), name='worklog-edit'),
     path('milestone/add/<int:project_id>/', MilestoneCreateView.as_view(), name='milestone-add'),
     path('milestone/<int:pk>/edit/', MilestoneUpdateView.as_view(), name='milestone-edit'),
+    path('scope/<int:pk>/', views.scope_item_detail, name='scope-detail'),
+    path('scope/add/<int:project_id>/', views.scope_item_create, name='scope-add'),
 ] 

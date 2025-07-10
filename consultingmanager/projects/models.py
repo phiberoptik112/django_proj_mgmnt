@@ -91,3 +91,15 @@ class Milestone(models.Model):
 
     def __str__(self):
         return f"{self.project.title} - {self.name} ({self.due_date})"
+
+class ScopeItem(models.Model):
+    project = models.ForeignKey('Project', related_name='scope_items', on_delete=models.CASCADE)
+    milestone = models.ForeignKey('Milestone', related_name='scope_items', on_delete=models.SET_NULL, null=True, blank=True)
+    phase = models.ForeignKey('ProjectPhase', related_name='scope_items', on_delete=models.SET_NULL, null=True, blank=True)
+    category = models.CharField(max_length=100)
+    description = models.TextField()
+    source_file = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.category}: {self.description[:30]}"
