@@ -1,17 +1,155 @@
 {% extends 'base/base.html' %}
 {% block content %}
 <div class="container mt-4">
-    <h2>Scope Item Detail</h2>
-    <div class="card">
-        <div class="card-body">
-            <p><strong>Category:</strong> {{ item.category }}</p>
-            <p><strong>Description:</strong> {{ item.description }}</p>
-            <p><strong>Source File:</strong> {{ item.source_file }}</p>
-            <p><strong>Milestone:</strong> {{ item.milestone }}</p>
-            <p><strong>Phase:</strong> {{ item.phase }}</p>
-            <p><strong>Created:</strong> {{ item.created_at }}</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Scope Item Detail</h2>
+        <div class="btn-group" role="group">
+            <a href="{% url 'projects:recitem-add' scope_item.pk %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add RecItem
+            </a>
+            <a href="{% url 'projects:project-detail' scope_item.project.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Project
+            </a>
         </div>
     </div>
-    <a href="{% url 'projects:project-detail' item.project.pk %}" class="btn btn-secondary mt-3">Back to Project</a>
+    
+    <div class="row">
+        <!-- Scope Item Details -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Scope Item Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Category:</dt>
+                        <dd class="col-sm-8">{{ scope_item.category }}</dd>
+                        
+                        <dt class="col-sm-4">Description:</dt>
+                        <dd class="col-sm-8">{{ scope_item.description }}</dd>
+                        
+                        <dt class="col-sm-4">Source File:</dt>
+                        <dd class="col-sm-8">{{ scope_item.source_file|default:"Not specified" }}</dd>
+                        
+                        <dt class="col-sm-4">Milestone:</dt>
+                        <dd class="col-sm-8">{{ scope_item.milestone|default:"Not assigned" }}</dd>
+                        
+                        <dt class="col-sm-4">Phase:</dt>
+                        <dd class="col-sm-8">{{ scope_item.phase|default:"Not assigned" }}</dd>
+                        
+                        <dt class="col-sm-4">Created:</dt>
+                        <dd class="col-sm-8">{{ scope_item.created_at|date:"F j, Y" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RecItems Summary -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">RecItems Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% if scope_item.rec_items.all %}
+                        <div class="list-group">
+                            {% for rec_item in scope_item.rec_items.all %}
+                                <a href="{% url 'projects:recitem-detail' rec_item.pk %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ rec_item.title }}</h6>
+                                            <small class="text-muted">{{ rec_item.get_category_display }}</small>
+                                        </div>
+                                        <span class="badge bg-{% if rec_item.status == 'accepted' %}success
+                                                         {% elif rec_item.status == 'implemented' %}success
+                                                         {% elif rec_item.status == 'sent' %}primary
+                                                         {% elif rec_item.status == 'under_review' %}warning
+                                                         {% elif rec_item.status == 'rejected' %}danger
+                                                         {% else %}secondary{% endif %}">
+                                            {{ rec_item.get_status_display }}
+                                        </span>
+                                    </div>
+                                    <p class="mb-1 small">{{ rec_item.description|truncatewords:20 }}</p>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No RecItems have been created for this scope item yet.</p>
+                        <a href="{% url 'projects:recitem-add' scope_item.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Create First RecItem
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RecItems List -->
+    {% if scope_item.rec_items.all %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">All RecItems</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec_item in scope_item.rec_items.all %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'projects:recitem-detail' rec_item.pk %}">
+                                            {{ rec_item.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ rec_item.get_category_display }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if rec_item.status == 'accepted' %}success
+                                                         {% elif rec_item.status == 'implemented' %}success
+                                                         {% elif rec_item.status == 'sent' %}primary
+                                                         {% elif rec_item.status == 'under_review' %}warning
+                                                         {% elif rec_item.status == 'rejected' %}danger
+                                                         {% else %}secondary{% endif %}">
+                                            {{ rec_item.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if rec_item.priority == 'high' %}danger
+                                                         {% elif rec_item.priority == 'medium' %}warning
+                                                         {% else %}info{% endif %}">
+                                            {{ rec_item.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ rec_item.updated_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'projects:recitem-detail' rec_item.pk %}" class="btn btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'projects:recitem-update' rec_item.pk %}" class="btn btn-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'projects:recitem-delete' rec_item.pk %}" class="btn btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %} 

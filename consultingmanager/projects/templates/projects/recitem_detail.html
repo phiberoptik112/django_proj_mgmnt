@@ -1,0 +1,283 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ rec_item.title }} - RecItem Detail{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>{{ rec_item.title }}</h2>
+            <p class="text-muted">
+                Scope Item: <a href="{% url 'projects:scope-detail' rec_item.scope_item.pk %}">{{ rec_item.scope_item.category }}</a>
+                <span class="mx-2">|</span>
+                Project: <a href="{% url 'projects:project-detail' rec_item.scope_item.project.pk %}">{{ rec_item.scope_item.project.title }}</a>
+            </p>
+        </div>
+        <div class="btn-group" role="group">
+            <a href="{% url 'projects:recitemversion-add' rec_item.pk %}" class="btn btn-success">
+                <i class="fas fa-plus"></i> New Version
+            </a>
+            <a href="{% url 'projects:recitem-update' rec_item.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'projects:recitem-delete' rec_item.pk %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Delete
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- RecItem Information -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">RecItem Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Category:</dt>
+                        <dd class="col-sm-8">{{ rec_item.get_category_display }}</dd>
+                        
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{% if rec_item.status == 'accepted' %}success
+                                             {% elif rec_item.status == 'implemented' %}success
+                                             {% elif rec_item.status == 'sent' %}primary
+                                             {% elif rec_item.status == 'under_review' %}warning
+                                             {% elif rec_item.status == 'rejected' %}danger
+                                             {% else %}secondary{% endif %}">
+                                {{ rec_item.get_status_display }}
+                            </span>
+                        </dd>
+                        
+                        <dt class="col-sm-4">Priority:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{% if rec_item.priority == 'high' %}danger
+                                             {% elif rec_item.priority == 'medium' %}warning
+                                             {% else %}info{% endif %}">
+                                {{ rec_item.get_priority_display }}
+                            </span>
+                        </dd>
+                        
+                        <dt class="col-sm-4">Created:</dt>
+                        <dd class="col-sm-8">{{ rec_item.created_at|date:"F j, Y" }}</dd>
+                        
+                        <dt class="col-sm-4">Updated:</dt>
+                        <dd class="col-sm-8">{{ rec_item.updated_at|date:"F j, Y" }}</dd>
+                    </dl>
+                    
+                    <hr>
+                    
+                    <h6>Description:</h6>
+                    <p>{{ rec_item.description|linebreaks }}</p>
+                    
+                    {% if rec_item.keywords %}
+                        <h6>Keywords:</h6>
+                        <p class="text-muted">{{ rec_item.keywords }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Current Version -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Current Version</h5>
+                </div>
+                <div class="card-body">
+                    {% if rec_item.get_latest_version %}
+                        {% with latest_version=rec_item.get_latest_version %}
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h6>Version {{ latest_version.version_number }}</h6>
+                                    <small class="text-muted">
+                                        Created: {{ latest_version.created_at|date:"F j, Y H:i" }}
+                                        {% if latest_version.created_by %}
+                                            by {{ latest_version.created_by.get_full_name|default:latest_version.created_by.username }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge bg-secondary">{{ latest_version.get_change_source_display }}</span>
+                            </div>
+                            
+                            <h6>Title:</h6>
+                            <p>{{ latest_version.title }}</p>
+                            
+                            <h6>Description:</h6>
+                            <p>{{ latest_version.description|linebreaks }}</p>
+                            
+                            {% if latest_version.technical_specs %}
+                                <h6>Technical Specifications:</h6>
+                                <pre class="bg-light p-3 rounded">{{ latest_version.technical_specs|pprint }}</pre>
+                            {% endif %}
+                            
+                            {% if latest_version.change_notes %}
+                                <h6>Change Notes:</h6>
+                                <p class="text-muted">{{ latest_version.change_notes }}</p>
+                            {% endif %}
+                            
+                            {% if latest_version.source_file or latest_version.source_email %}
+                                <h6>Source References:</h6>
+                                <ul class="list-unstyled">
+                                    {% if latest_version.source_file %}
+                                        <li><i class="fas fa-file"></i> <a href="{% url 'files:file-detail' latest_version.source_file.pk %}">{{ latest_version.source_file.title }}</a></li>
+                                    {% endif %}
+                                    {% if latest_version.source_email %}
+                                        <li><i class="fas fa-envelope"></i> <a href="#">{{ latest_version.source_email.subject }}</a></li>
+                                    {% endif %}
+                                </ul>
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <p class="text-muted">No versions have been created yet.</p>
+                        <a href="{% url 'projects:recitemversion-add' rec_item.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create First Version
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attributes -->
+    {% if rec_item.attributes.all %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Technical Attributes</h5>
+                <a href="{% url 'projects:recitemattribute-add' rec_item.pk %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Add Attribute
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Value</th>
+                                <th>Unit</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attribute in rec_item.attributes.all %}
+                                <tr>
+                                    <td>{{ attribute.name }}</td>
+                                    <td>{{ attribute.value }}</td>
+                                    <td>{{ attribute.unit|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ attribute.get_attribute_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'projects:recitemattribute-update' attribute.pk %}" class="btn btn-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'projects:recitemattribute-delete' attribute.pk %}" class="btn btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Technical Attributes</h5>
+                <a href="{% url 'projects:recitemattribute-add' rec_item.pk %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Add Attribute
+                </a>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">No technical attributes have been defined yet.</p>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Version History -->
+    {% if versions %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Version History</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for version in versions %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6>Version {{ version.version_number }} - {{ version.title }}</h6>
+                                        <small class="text-muted">
+                                            {{ version.created_at|date:"F j, Y H:i" }}
+                                            {% if version.created_by %}
+                                                by {{ version.created_by.get_full_name|default:version.created_by.username }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-secondary">{{ version.get_change_source_display }}</span>
+                                </div>
+                                
+                                <p class="mt-2">{{ version.description|truncatewords:30 }}</p>
+                                
+                                {% if version.change_notes %}
+                                    <p class="text-muted small">{{ version.change_notes }}</p>
+                                {% endif %}
+                                
+                                <div class="btn-group btn-group-sm">
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Details</a>
+                                    {% if version.source_file %}
+                                        <a href="{% url 'files:file-detail' version.source_file.pk %}" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-file"></i> Source File
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #007bff;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #007bff;
+}
+
+.timeline-content {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 3px solid #007bff;
+}
+</style>
+{% endblock %} 

@@ -6,6 +6,9 @@ from django.db.models.functions import TruncWeek
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from datetime import timedelta, datetime
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 from .models import Project
 from .forms import ProjectForm
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -17,8 +20,8 @@ from django.utils.formats import get_format
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Sum
 from django.http import JsonResponse
-from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm, ScopeItemForm
-from .models import ProjectPhase, PhaseWorkLog, Milestone, ScopeItem
+from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm, ScopeItemForm, RecItemForm, RecItemVersionForm, RecItemAttributeForm
+from .models import ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, RecItemAttribute
 
 # Create your views here.
 
@@ -198,141 +201,479 @@ class ProjectDashboardView(LoginRequiredMixin, TemplateView):
             })
             
         return budget_data
-    
-    def get_file_activity_data(self, projects):
-        """Get file activity over time"""
-        # Group file uploads by week/month
 
-        
+    def get_file_activity_data(self, projects):
+        """Generate file activity data for time series chart"""
         file_activity = []
         
-        # Get file uploads grouped by week for the last 6 months
-        six_months_ago = timezone.now() - timedelta(days=180)
-        
-        weekly_uploads = File.objects.filter(
-            uploaded_at__gte=six_months_ago
-        ).annotate(
-            week=TruncWeek('uploaded_at')
-        ).values('week', 'project__title').annotate(
-            count=Count('id')
-        ).order_by('week')
-        
-        for entry in weekly_uploads:
-            file_activity.append({
-                'week': entry['week'].isoformat() if entry['week'] else None,
-                'project': entry['project__title'],
-                'file_count': entry['count'],
-            })
+        for project in projects:
+            # Group files by week
+            files_by_week = project.files.annotate(
+                week=TruncWeek('uploaded_at')
+            ).values('week').annotate(
+                file_count=Count('id')
+            ).order_by('week')
             
+            for week_data in files_by_week:
+                file_activity.append({
+                    'project_id': project.id,
+                    'project_title': project.title,
+                    'week': week_data['week'].strftime('%Y-%m-%d'),
+                    'file_count': week_data['file_count']
+                })
+        
         return file_activity
+
+class RecItemDashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'projects/recitem_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get all RecItems with related data
+        rec_items = RecItem.objects.select_related(
+            'scope_item', 'scope_item__project', 'scope_item__project__client'
+        ).prefetch_related('versions', 'attributes')
+        
+        # RecItem status distribution
+        status_data = self.get_recitem_status_data(rec_items)
+        
+        # RecItem activity over time
+        activity_data = self.get_recitem_activity_data(rec_items)
+        
+        # RecItem version history
+        version_data = self.get_recitem_version_data(rec_items)
+        
+        # Top projects by RecItem count
+        project_data = self.get_project_recitem_data()
+        
+        # Recent RecItem updates
+        recent_updates = self.get_recent_recitem_updates()
+        
+        context.update({
+            'rec_items': rec_items,
+            'status_data': status_data,
+            'activity_data': activity_data,
+            'version_data': version_data,
+            'project_data': project_data,
+            'recent_updates': recent_updates,
+            'total_rec_items': rec_items.count(),
+            'total_versions': RecItemVersion.objects.count(),
+            'total_projects_with_recitems': Project.objects.filter(
+                scope_items__rec_items__isnull=False
+            ).distinct().count(),
+        })
+        
+        return context
+    
+    def get_recitem_status_data(self, rec_items):
+        """Get RecItem status distribution for pie chart"""
+        status_counts = {}
+        
+        for rec_item in rec_items:
+            status = rec_item.status
+            if status not in status_counts:
+                status_counts[status] = 0
+            status_counts[status] += 1
+        
+        return {
+            'labels': [status.replace('_', ' ').title() for status in status_counts.keys()],
+            'data': list(status_counts.values()),
+            'colors': ['#28a745', '#007bff', '#ffc107', '#6c757d', '#dc3545']
+        }
+    
+    def get_recitem_activity_data(self, rec_items):
+        """Get RecItem activity over time for line chart"""
+        activity_by_month = {}
+        
+        for rec_item in rec_items:
+            # Group by month based on latest version date
+            latest_version = rec_item.get_latest_version()
+            if latest_version:
+                month_key = latest_version.created_at.strftime('%Y-%m')
+                if month_key not in activity_by_month:
+                    activity_by_month[month_key] = 0
+                activity_by_month[month_key] += 1
+        
+        # Sort by month
+        sorted_months = sorted(activity_by_month.keys())
+        
+        return {
+            'labels': sorted_months,
+            'data': [activity_by_month[month] for month in sorted_months]
+        }
+    
+    def get_recitem_version_data(self, rec_items):
+        """Get RecItem version history for bar chart"""
+        version_counts = {}
+        
+        for rec_item in rec_items:
+            version_count = rec_item.versions.count()
+            if version_count not in version_counts:
+                version_counts[version_count] = 0
+            version_counts[version_count] += 1
+        
+        return {
+            'labels': [f'{count} versions' for count in sorted(version_counts.keys())],
+            'data': [version_counts[count] for count in sorted(version_counts.keys())]
+        }
+    
+    def get_project_recitem_data(self):
+        """Get top projects by RecItem count"""
+        project_recitem_counts = Project.objects.filter(
+            scope_items__rec_items__isnull=False
+        ).annotate(
+            rec_item_count=Count('scope_items__rec_items')
+        ).order_by('-rec_item_count')[:10]
+        
+        return {
+            'labels': [project.title for project in project_recitem_counts],
+            'data': [project.rec_item_count for project in project_recitem_counts]
+        }
+    
+    def get_recent_recitem_updates(self):
+        """Get recent RecItem updates"""
+        return RecItemVersion.objects.select_related(
+            'rec_item', 'rec_item__scope_item', 'rec_item__scope_item__project'
+        ).order_by('-created_at')[:10]
 
 @require_GET
 def dashboard_project_details(request, project_id):
-    """Return project details as JSON for dashboard interactivity."""
-    from files.models import File
-    try:
-        from billing.models import BillingDetail
-    except ImportError:
-        BillingDetail = None
-    from django.apps import apps
-    Project = apps.get_model('projects', 'Project')
-    project = get_object_or_404(Project, pk=project_id)
-
-    # Status chart (single project)
+    """AJAX endpoint for getting project-specific dashboard data"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    # Get project-specific data
+    timeline_data = []
+    start_date = project.start_date
+    end_date = project.end_date or (start_date + timedelta(days=90))
+    
+    # Get file activity dates
+    file_dates = list(project.files.values_list('uploaded_at__date', flat=True))
+    
+    # Get billing dates
+    billing_dates = list(project.billing_details.values_list('invoice_date', flat=True))
+    
+    timeline_data.append({
+        'id': project.id,
+        'title': project.title,
+        'client': project.client.name,
+        'start_date': start_date.isoformat(),
+        'end_date': end_date.isoformat(),
+        'status': project.status,
+        'budget': float(project.budget or 0),
+        'file_activity': [d.isoformat() for d in file_dates],
+        'billing_activity': [d.isoformat() for d in billing_dates],
+    })
+    
+    # Budget data
+    total_billed = project.billing_details.aggregate(total=Sum('amount'))['total'] or 0
+    budget_data = [{
+        'project_id': project.id,
+        'title': project.title,
+        'budget': float(project.budget or 0),
+        'billed': float(total_billed),
+    }]
+    
+    # File activity data
+    files_by_week = project.files.annotate(
+        week=TruncWeek('uploaded_at')
+    ).values('week').annotate(
+        file_count=Count('id')
+    ).order_by('week')
+    
+    file_activity_data = []
+    for week_data in files_by_week:
+        file_activity_data.append({
+            'project_id': project.id,
+            'project_title': project.title,
+            'week': week_data['week'].strftime('%Y-%m-%d'),
+            'file_count': week_data['file_count']
+        })
+    
+    # Status data (for this project only)
     status_labels = [project.get_status_display()]
     status_counts = [1]
-
-    # Budget and billed
-    budget = project.budget or 0
-    # If billing details are related, sum billed for this project
-    billed = 0
-    if hasattr(project, 'billing_details'):
-        billed = project.billing_details.aggregate(total=Sum('amount'))['total'] or 0
-    budget_data = [{
-        'title': project.title,
-        'budget': float(budget),
-        'billed': float(billed),
-    }]
-
-    # Timeline data (single project)
-    timeline_data = [{
-        'title': project.title,
-        'client': project.client.name if hasattr(project, 'client') else '',
-        'status': project.status,
-        'start_date': project.start_date.isoformat() if hasattr(project, 'start_date') and project.start_date else '',
-        'end_date': project.end_date.isoformat() if hasattr(project, 'end_date') and project.end_date else '',
-        'file_activity': list(File.objects.filter(project=project).order_by('uploaded_at').values_list('uploaded_at', flat=True)),
-        'billing_activity': list(getattr(project, 'billing_details', []).values_list('date', flat=True)) if hasattr(project, 'billing_details') else [],
-    }]
-
-    # File activity data (by week)
-    file_qs = File.objects.filter(project=project)
-    file_activity_data = []
-    for f in file_qs:
-        week = f.uploaded_at.strftime('%Y-%W')
-        file_activity_data.append({'week': week, 'file_count': 1})
-
+    
     return JsonResponse({
+        'timeline_data': timeline_data,
+        'budget_data': budget_data,
+        'file_activity_data': file_activity_data,
         'status_labels': status_labels,
         'status_counts': status_counts,
-        'budget_data': budget_data,
-        'timeline_data': timeline_data,
-        'file_activity_data': file_activity_data,
-    }, encoder=DjangoJSONEncoder)
+    })
+
+@login_required
+@require_POST
+def analyze_project_recitems(request, project_id):
+    """AJAX endpoint to trigger RecItem analysis for a project"""
+    try:
+        project = get_object_or_404(Project, id=project_id)
+        
+        # Import here to avoid circular imports
+        from files.utils.recitem_analyzer import analyze_project_recitems
+        
+        # Run the analysis
+        results = analyze_project_recitems(project_id)
+        
+        # Prepare response data
+        response_data = {
+            'success': True,
+            'project_title': project.title,
+            'total_updates': results['total_updates'],
+            'total_errors': results['total_errors'],
+            'analysis_date': results['analysis_date'].isoformat(),
+            'message': f"Analysis completed: {results['total_updates']} versions created, {results['total_errors']} errors"
+        }
+        
+        # Add detailed results if requested
+        if request.GET.get('detailed') == 'true':
+            response_data['email_results'] = [
+                {
+                    'rec_item_title': r.get('rec_item', {}).title if r.get('rec_item') else 'Unknown',
+                    'action': r.get('action'),
+                    'error': r.get('error')
+                }
+                for r in results['email_results']
+            ]
+            response_data['file_results'] = [
+                {
+                    'rec_item_title': r.get('rec_item', {}).title if r.get('rec_item') else 'Unknown',
+                    'action': r.get('action'),
+                    'error': r.get('error')
+                }
+                for r in results['file_results']
+            ]
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'message': f"Analysis failed: {str(e)}"
+        }, status=500)
 
 class ProjectPhaseCreateView(LoginRequiredMixin, CreateView):
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/projectphase_form.html'
+
     def get_success_url(self):
-        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+        return reverse_lazy('projects:project-detail', kwargs={'pk': self.object.project.pk})
 
 class ProjectPhaseUpdateView(LoginRequiredMixin, UpdateView):
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/projectphase_form.html'
+
     def get_success_url(self):
-        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+        return reverse_lazy('projects:project-detail', kwargs={'pk': self.object.project.pk})
 
 class PhaseWorkLogCreateView(LoginRequiredMixin, CreateView):
     model = PhaseWorkLog
     form_class = PhaseWorkLogForm
     template_name = 'projects/phaseworklog_form.html'
+
     def get_success_url(self):
-        return self.object.phase.project.get_absolute_url() if hasattr(self.object.phase.project, 'get_absolute_url') else '/'
+        return reverse_lazy('projects:project-detail', kwargs={'pk': self.object.phase.project.pk})
 
 class PhaseWorkLogUpdateView(LoginRequiredMixin, UpdateView):
     model = PhaseWorkLog
     form_class = PhaseWorkLogForm
     template_name = 'projects/phaseworklog_form.html'
+
     def get_success_url(self):
-        return self.object.phase.project.get_absolute_url() if hasattr(self.object.phase.project, 'get_absolute_url') else '/'
+        return reverse_lazy('projects:project-detail', kwargs={'pk': self.object.phase.project.pk})
 
 class MilestoneCreateView(LoginRequiredMixin, CreateView):
     model = Milestone
     form_class = MilestoneForm
     template_name = 'projects/milestone_form.html'
+
     def get_success_url(self):
-        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+        return reverse_lazy('projects:project-detail', kwargs={'pk': self.object.project.pk})
 
 class MilestoneUpdateView(LoginRequiredMixin, UpdateView):
     model = Milestone
     form_class = MilestoneForm
     template_name = 'projects/milestone_form.html'
+
     def get_success_url(self):
-        return self.object.project.get_absolute_url() if hasattr(self.object.project, 'get_absolute_url') else '/'
+        return reverse_lazy('projects:project-detail', kwargs={'pk': self.object.project.pk})
 
 def scope_item_detail(request, pk):
-    item = get_object_or_404(ScopeItem, pk=pk)
-    return render(request, 'projects/scope_detail.html', {'item': item})
+    scope_item = get_object_or_404(ScopeItem, pk=pk)
+    return render(request, 'projects/scope_detail.html', {'scope_item': scope_item})
 
 def scope_item_create(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
     if request.method == 'POST':
         form = ScopeItemForm(request.POST)
         if form.is_valid():
-            form.save()
+            scope_item = form.save(commit=False)
+            scope_item.project = project
+            scope_item.save()
+            messages.success(request, 'Scope item created successfully.')
             return redirect('projects:project-detail', pk=project_id)
     else:
         form = ScopeItemForm(initial={'project': project})
+    
     return render(request, 'projects/scope_form.html', {'form': form, 'project': project})
+
+# RecItem Views
+class RecItemListView(LoginRequiredMixin, ListView):
+    model = RecItem
+    template_name = 'projects/recitem_list.html'
+    context_object_name = 'rec_items'
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        scope_item_id = self.kwargs.get('scope_item_id')
+        if scope_item_id:
+            queryset = queryset.filter(scope_item_id=scope_item_id)
+        return queryset.select_related('scope_item', 'scope_item__project')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        scope_item_id = self.kwargs.get('scope_item_id')
+        if scope_item_id:
+            context['scope_item'] = get_object_or_404(ScopeItem, pk=scope_item_id)
+        return context
+
+class RecItemDetailView(LoginRequiredMixin, DetailView):
+    model = RecItem
+    template_name = 'projects/recitem_detail.html'
+    context_object_name = 'rec_item'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['versions'] = self.object.versions.order_by('-version_number')
+        context['attributes'] = self.object.attributes.all()
+        return context
+
+class RecItemCreateView(LoginRequiredMixin, CreateView):
+    model = RecItem
+    form_class = RecItemForm
+    template_name = 'projects/recitem_form.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        scope_item_id = self.kwargs.get('scope_item_id')
+        if scope_item_id:
+            initial['scope_item'] = scope_item_id
+        return initial
+
+    def get_success_url(self):
+        return reverse_lazy('projects:recitem-detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'RecItem created successfully.')
+        return super().form_valid(form)
+
+class RecItemUpdateView(LoginRequiredMixin, UpdateView):
+    model = RecItem
+    form_class = RecItemForm
+    template_name = 'projects/recitem_form.html'
+
+    def get_success_url(self):
+        return reverse_lazy('projects:recitem-detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'RecItem updated successfully.')
+        return super().form_valid(form)
+
+class RecItemDeleteView(LoginRequiredMixin, DeleteView):
+    model = RecItem
+    template_name = 'projects/recitem_confirm_delete.html'
+
+    def get_success_url(self):
+        return reverse_lazy('projects:scope-detail', kwargs={'pk': self.object.scope_item.pk})
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'RecItem deleted successfully.')
+        return super().delete(request, *args, **kwargs)
+
+# RecItemVersion Views
+class RecItemVersionListView(LoginRequiredMixin, ListView):
+    model = RecItemVersion
+    template_name = 'projects/recitemversion_list.html'
+    context_object_name = 'versions'
+    ordering = ['-version_number']
+
+    def get_queryset(self):
+        rec_item_id = self.kwargs.get('rec_item_id')
+        return RecItemVersion.objects.filter(rec_item_id=rec_item_id).select_related('rec_item')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        rec_item_id = self.kwargs.get('rec_item_id')
+        context['rec_item'] = get_object_or_404(RecItem, pk=rec_item_id)
+        return context
+
+class RecItemVersionCreateView(LoginRequiredMixin, CreateView):
+    model = RecItemVersion
+    form_class = RecItemVersionForm
+    template_name = 'projects/recitemversion_form.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        rec_item_id = self.kwargs.get('rec_item_id')
+        if rec_item_id:
+            rec_item = get_object_or_404(RecItem, pk=rec_item_id)
+            initial['rec_item'] = rec_item
+            initial['title'] = rec_item.title
+            initial['description'] = rec_item.description
+            initial['technical_specs'] = rec_item.get_latest_version().technical_specs if rec_item.get_latest_version() else {}
+        return initial
+
+    def get_success_url(self):
+        return reverse_lazy('projects:recitem-detail', kwargs={'pk': self.object.rec_item.pk})
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'New version created successfully.')
+        return super().form_valid(form)
+
+# RecItemAttribute Views
+class RecItemAttributeCreateView(LoginRequiredMixin, CreateView):
+    model = RecItemAttribute
+    form_class = RecItemAttributeForm
+    template_name = 'projects/recitemattribute_form.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        rec_item_id = self.kwargs.get('rec_item_id')
+        if rec_item_id:
+            initial['rec_item'] = rec_item_id
+        return initial
+
+    def get_success_url(self):
+        return reverse_lazy('projects:recitem-detail', kwargs={'pk': self.object.rec_item.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Attribute added successfully.')
+        return super().form_valid(form)
+
+class RecItemAttributeUpdateView(LoginRequiredMixin, UpdateView):
+    model = RecItemAttribute
+    form_class = RecItemAttributeForm
+    template_name = 'projects/recitemattribute_form.html'
+
+    def get_success_url(self):
+        return reverse_lazy('projects:recitem-detail', kwargs={'pk': self.object.rec_item.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Attribute updated successfully.')
+        return super().form_valid(form)
+
+class RecItemAttributeDeleteView(LoginRequiredMixin, DeleteView):
+    model = RecItemAttribute
+    template_name = 'projects/recitemattribute_confirm_delete.html'
+
+    def get_success_url(self):
+        return reverse_lazy('projects:recitem-detail', kwargs={'pk': self.object.rec_item.pk})
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Attribute deleted successfully.')
+        return super().delete(request, *args, **kwargs)
