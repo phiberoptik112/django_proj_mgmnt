@@ -1,7 +1,7 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}{{ rec_item.title }} - RecItem Detail{% endblock %}
+{% block title %}{{ rec_item.title }} - Rec_Item Detail{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -15,13 +15,13 @@
             </p>
         </div>
         <div class="btn-group" role="group">
-            <a href="{% url 'projects:recitemversion-add' rec_item.pk %}" class="btn btn-success">
+            <a href="{% url 'projects:rec_itemversion-add' rec_item.pk %}" class="btn btn-success">
                 <i class="fas fa-plus"></i> New Version
             </a>
-            <a href="{% url 'projects:recitem-update' rec_item.pk %}" class="btn btn-warning">
+            <a href="{% url 'projects:rec_item-update' rec_item.pk %}" class="btn btn-warning">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <a href="{% url 'projects:recitem-delete' rec_item.pk %}" class="btn btn-danger">
+            <a href="{% url 'projects:rec_item-delete' rec_item.pk %}" class="btn btn-danger">
                 <i class="fas fa-trash"></i> Delete
             </a>
         </div>
@@ -32,7 +32,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">RecItem Information</h5>
+                    <h5 class="card-title mb-0">Rec_Item Information</h5>
                 </div>
                 <div class="card-body">
                     <dl class="row">
@@ -132,7 +132,7 @@
                         {% endwith %}
                     {% else %}
                         <p class="text-muted">No versions have been created yet.</p>
-                        <a href="{% url 'projects:recitemversion-add' rec_item.pk %}" class="btn btn-primary">
+                        <a href="{% url 'projects:rec_itemversion-add' rec_item.pk %}" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Create First Version
                         </a>
                     {% endif %}
@@ -146,7 +146,7 @@
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Technical Attributes</h5>
-                <a href="{% url 'projects:recitemattribute-add' rec_item.pk %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'projects:rec_itemattribute-add' rec_item.pk %}" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus"></i> Add Attribute
                 </a>
             </div>
@@ -173,10 +173,10 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'projects:recitemattribute-update' attribute.pk %}" class="btn btn-warning">
+                                            <a href="{% url 'projects:rec_itemattribute-update' attribute.pk %}" class="btn btn-warning">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="{% url 'projects:recitemattribute-delete' attribute.pk %}" class="btn btn-danger">
+                                            <a href="{% url 'projects:rec_itemattribute-delete' attribute.pk %}" class="btn btn-danger">
                                                 <i class="fas fa-trash"></i>
                                             </a>
                                         </div>
@@ -192,7 +192,7 @@
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Technical Attributes</h5>
-                <a href="{% url 'projects:recitemattribute-add' rec_item.pk %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'projects:rec_itemattribute-add' rec_item.pk %}" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus"></i> Add Attribute
                 </a>
             </div>

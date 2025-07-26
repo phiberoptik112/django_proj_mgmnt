@@ -28,24 +28,24 @@
 <div class="container-fluid py-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>RecItem Dashboard</h1>
+        <h1>Rec_Item Dashboard</h1>
         <div class="d-flex gap-3">
             <div class="card bg-primary text-white">
                 <div class="card-body text-center">
                     <h3>{{ total_rec_items }}</h3>
-                    <small>Total RecItems</small>
+                    <small>Total Rec_Items</small>
                 </div>
             </div>
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
                     <h3>{{ total_versions }}</h3>
-                    <small>Total Versions</small>
+                    <small>Total Rec_Item Versions</small>
                 </div>
             </div>
             <div class="card bg-info text-white">
                 <div class="card-body text-center">
                     <h3>{{ total_projects_with_recitems }}</h3>
-                    <small>Projects with RecItems</small>
+                    <small>Projects with Rec_Items</small>
                 </div>
             </div>
         </div>
@@ -56,7 +56,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>RecItem Status Distribution</h5>
+                    <h5>Rec_Item Status Distribution</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="statusChart" height="300"></canvas>
@@ -68,7 +68,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>RecItem Activity Over Time</h5>
+                    <h5>Rec_Item Activity Over Time</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="activityChart" height="300"></canvas>
@@ -82,7 +82,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>RecItem Version Distribution</h5>
+                    <h5>Rec_Item Version Distribution</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="versionChart" height="300"></canvas>
@@ -94,7 +94,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>Top Projects by RecItem Count</h5>
+                    <h5>Top Projects by Rec_Item Count</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="projectChart" height="300"></canvas>
@@ -108,7 +108,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5>Recent RecItem Updates</h5>
+                    <h5>Recent Rec_Item Updates</h5>
                 </div>
                 <div class="card-body">
                     <div class="recent-updates-list">
@@ -159,7 +159,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5>All RecItems</h5>
+                    <h5>All Rec_Items</h5>
                 </div>
                 <div class="card-body">
                     {% if rec_items %}
@@ -200,7 +200,7 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-muted">No RecItems found.</p>
+                        <p class="text-muted">No Rec_Items found.</p>
                     {% endif %}
                 </div>
             </div>
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: activityData.labels,
             datasets: [{
-                label: 'RecItems Updated',
+                label: 'Rec_Items Updated',
                 data: activityData.data,
                 borderColor: 'rgb(75, 192, 192)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',

@@ -1,4 +1,4 @@
-# Consulting Manager
+## Consulting Manager ##
 
 A Django-based project management system designed for consulting firms to manage clients, projects, files, and communications efficiently.
 
@@ -11,6 +11,18 @@ A Django-based project management system designed for consulting firms to manage
 - **Communication Tools**: Manage project communications and documentation
 - **Data Analysis**: Built-in support for data analysis with pandas and matplotlib
 - **Document Processing**: Support for various file formats (PDF, DOCX, MSG)
+
+## API
+
+The project includes a RESTful API for programmatic access to projects, timelines, and unified timeline data. The API is built with Django REST Framework and supports endpoints for project timelines and unified timeline visualizations.
+
+- Base URL: `/api/`
+- Example endpoints:
+  - `/api/projects/` — Project timeline data
+  - `/api/unified-timeline/` — Unified timeline for all projects
+  - `/api/unified-timeline/<project_id>/` — Timeline for a specific project
+
+See the [API documentation](api/README.md) for detailed usage, authentication, and example requests/responses.
 
 ## Project Structure
 
