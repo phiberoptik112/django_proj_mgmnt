@@ -22,7 +22,7 @@ class ClientCreateView(CreateView):
     model = Client
     form_class = ClientForm
     template_name = 'clients/client_form.html'
-    success_url = reverse_lazy('clients:client_list')
+    success_url = reverse_lazy('clients:client-list')
 
     def form_valid(self, form):
         messages.success(self.request, 'Client created successfully.')
@@ -32,7 +32,7 @@ class ClientUpdateView(UpdateView):
     model = Client
     form_class = ClientForm
     template_name = 'clients/client_form.html'
-    success_url = reverse_lazy('clients:client_list')
+    success_url = reverse_lazy('clients:client-list')
 
     def form_valid(self, form):
         messages.success(self.request, 'Client updated successfully.')
@@ -41,7 +41,7 @@ class ClientUpdateView(UpdateView):
 class ClientDeleteView(DeleteView):
     model = Client
     template_name = 'clients/client_confirm_delete.html'
-    success_url = reverse_lazy('clients:client_list')
+    success_url = reverse_lazy('clients:client-list')
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, 'Client deleted successfully.')

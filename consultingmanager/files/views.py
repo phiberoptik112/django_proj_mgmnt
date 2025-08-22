@@ -5,11 +5,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from .models import File, ProjectMetadata, RoomAcousticsData, Email, Proposal
+from .models import File, ProjectMetadata, RoomAcousticsData, Email, Proposal, DocumentSummary
 from .forms import FileForm, ProjectMetadataForm, RoomAcousticsDataForm, ProposalForm, ProposalImportForm
 from .tasks import analyze_project_metadata
 from projects.models import Project
 from .utils.proposal_parser import ProposalParser
+from .utils.pdf_to_markdown import pdf_to_markdown_and_summary
 import tempfile
 import os
 import uuid
@@ -83,6 +84,33 @@ class FileDetailView(LoginRequiredMixin, DetailView):
     model = File
     template_name = 'files/file_detail.html'
     context_object_name = 'file'
+
+    def post(self, request, *args, **kwargs):
+        """Allow triggering PDF -> Markdown processing on this file."""
+        self.object = self.get_object()
+        action = request.POST.get('action')
+        if action == 'process_pdf' and self.object.file and self.object.file.path.lower().endswith('.pdf'):
+            try:
+                md, summ, page_count, title = pdf_to_markdown_and_summary(self.object.file.path)
+                DocumentSummary.objects.create(
+                    project=self.object.project,
+                    file=self.object,
+                    source_path=self.object.file.path,
+                    title=title or self.object.title,
+                    page_count=page_count,
+                    markdown=md,
+                    summary=summ,
+                    status='processed',
+                )
+                messages.success(request, 'PDF processed into Markdown and summary.')
+            except Exception as e:
+                messages.error(request, f'Failed to process PDF: {e}')
+        return redirect('files:file-detail', pk=self.object.pk)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['document_summaries'] = self.object.document_summaries.all()
+        return context
 
 class ProjectMetadataCreateView(LoginRequiredMixin, CreateView):
     model = ProjectMetadata
@@ -210,56 +238,32 @@ class ProposalImportView(LoginRequiredMixin, View):
             'project': project
         })
 
+class BulkPdfProcessView(LoginRequiredMixin, View):
+    """Process all project PDF `File` records into Markdown summaries."""
     def post(self, request, project_id):
         project = get_object_or_404(Project, pk=project_id)
-        form = self.form_class(request.POST, request.FILES)
-        
-        if form.is_valid():
+        processed = 0
+        failed = 0
+        for f in File.objects.filter(project=project, file_type='document'):
             try:
-                # Save the uploaded file temporarily
-                uploaded_file = request.FILES['file']
-                temp_path = self.store_temp_proposal(uploaded_file)
-
-                # Parse the proposal
-                parser = ProposalParser(temp_path)
-                proposal_data = parser.parse()
-                
-                # Check for duplicates
-                is_duplicate, existing_proposal, file_hash = parser.check_duplicate_by_hash(project_id)
-                if is_duplicate:
-                    messages.warning(request, f'This proposal appears to be a duplicate of an existing proposal.')
-                    os.remove(temp_path)
-                    return redirect('projects:project-detail', pk=project_id)
-
-                # Create the proposal
-                proposal = Proposal.objects.create(
-                    project=project,
-                    attachments=uploaded_file,
-                    **proposal_data
-                )
-
-                # Store file hash
-                parser.store_file_hash(proposal, uploaded_file.name)
-
-                # Clean up temporary file
-                os.remove(temp_path)
-
-                messages.success(request, 'Proposal imported successfully.')
-                return redirect('projects:project-detail', pk=project_id)
-
-            except Exception as e:
-                messages.error(request, f'Error importing proposal: {str(e)}')
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                return render(request, self.template_name, {
-                    'form': form,
-                    'project': project
-                })
-
-        return render(request, self.template_name, {
-            'form': form,
-            'project': project
-        })
+                if f.file and f.file.path.lower().endswith('.pdf'):
+                    md, summ, page_count, title = pdf_to_markdown_and_summary(f.file.path)
+                    DocumentSummary.objects.create(
+                        project=project,
+                        file=f,
+                        source_path=f.file.path,
+                        title=title or f.title,
+                        page_count=page_count,
+                        markdown=md,
+                        summary=summ,
+                        status='processed',
+                    )
+                    processed += 1
+            except Exception:
+                failed += 1
+                continue
+        messages.success(request, f'Processed {processed} PDFs; {failed} failed.')
+        return redirect('projects:project-detail', pk=project_id)
 
 @login_required
 def analyze_metadata(request, pk):

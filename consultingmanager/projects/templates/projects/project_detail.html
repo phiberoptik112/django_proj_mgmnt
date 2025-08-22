@@ -29,6 +29,9 @@
             </p>
         </div>
         <div class="btn-group" role="group">
+            <a href="{% url 'billing:project_dashboard' project.pk %}" class="btn btn-success">
+                <i class="fas fa-dollar-sign"></i> Billing Dashboard
+            </a>
             <a href="{% url 'projects:project-update' project.pk %}" class="btn btn-warning">
                 <i class="fas fa-edit"></i> Edit Project
             </a>
@@ -80,6 +83,39 @@
                 </div>
                 <div class="card-body">
                     <p class="card-text">{{ project.description|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Summaries for Billing Context -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Document Summaries</h5>
+                    <form action="{% url 'files:process-pdfs' project.id %}" method="post" class="mb-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-magic"></i> Process PDFs
+                        </button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    {% with summaries=project.document_summaries.all %}
+                        {% if summaries %}
+                            <div class="row">
+                                {% for ds in summaries|slice:':6' %}
+                                    <div class="col-md-6 mb-3">
+                                        <div class="border rounded p-3 h-100">
+                                            <h6 class="mb-1">{{ ds.title|default:'Document' }}</h6>
+                                            <p class="small text-muted">{{ ds.summary }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No document summaries yet. Use "Process PDFs" to generate.</p>
+                        {% endif %}
+                    {% endwith %}
                 </div>
             </div>
         </div>

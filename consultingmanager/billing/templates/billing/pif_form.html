@@ -1,0 +1,379 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>{% if is_create %}Create{% else %}Edit{% endif %} Project Information Form</h1>
+            <p class="text-muted">Project: {{ project.title }} - {{ project.client.name }}</p>
+        </div>
+    </div>
+
+    <form method="post" id="pifForm">
+        {% csrf_token %}
+        
+        <!-- Project Identification Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Project Identification and Originator</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.project_number.id_for_label }}">Project Number</label>
+                            {{ form.project_number }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.project_name.id_for_label }}">Project Name</label>
+                            {{ form.project_name }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.dlaa_office.id_for_label }}">DLAA Office</label>
+                            {{ form.dlaa_office }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="{{ form.project_location_city.id_for_label }}">City</label>
+                            {{ form.project_location_city }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="{{ form.project_location_state.id_for_label }}">State</label>
+                            {{ form.project_location_state }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.originator.id_for_label }}">Originator</label>
+                            {{ form.originator }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.date_entered.id_for_label }}">Date Entered</label>
+                            {{ form.date_entered }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Information Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Client Information</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.client_name.id_for_label }}">Name (Firm or Individual)</label>
+                            {{ form.client_name }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.billing_contact.id_for_label }}">Billing Contact</label>
+                            {{ form.billing_contact }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.billing_contact_email.id_for_label }}">Billing Contact Email</label>
+                            {{ form.billing_contact_email }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.phone.id_for_label }}">Phone</label>
+                            {{ form.phone }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.client_project_name.id_for_label }}">Client Project Name/Number</label>
+                            {{ form.client_project_name }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.purchase_order_number.id_for_label }}">Purchase Order Number</label>
+                            {{ form.purchase_order_number }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secondary Contact Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Contact if Different from Billing Address</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.secondary_contact.id_for_label }}">Secondary Contact</label>
+                            {{ form.secondary_contact }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.secondary_contact_email.id_for_label }}">Secondary Contact Email</label>
+                            {{ form.secondary_contact_email }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Management Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Project Management Details</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.project_manager.id_for_label }}">Project Manager</label>
+                            {{ form.project_manager }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.project_start_date.id_for_label }}">Project Start Date</label>
+                            {{ form.project_start_date }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.fee_contract_amount.id_for_label }}">Fee (Contract Amount)</label>
+                            {{ form.fee_contract_amount }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.type_of_contract.id_for_label }}">Type of Contract</label>
+                            {{ form.type_of_contract }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.expenses.id_for_label }}">Expenses</label>
+                            {{ form.expenses }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax Requirements Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Special Tax Requirements (Highlight)</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>HI GET Location:</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="hawaii" id="tax_hawaii">
+                            <label class="form-check-label" for="tax_hawaii">Hawaii</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="oahu" id="tax_oahu">
+                            <label class="form-check-label" for="tax_oahu">Oahu</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="maui" id="tax_maui">
+                            <label class="form-check-label" for="tax_maui">Maui</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="kauai" id="tax_kauai">
+                            <label class="form-check-label" for="tax_kauai">Kauai</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>International:</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="japan" id="tax_japan">
+                            <label class="form-check-label" for="tax_japan">Japan</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="south_korea" id="tax_south_korea">
+                            <label class="form-check-label" for="tax_south_korea">South Korea</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="guam" id="tax_guam">
+                            <label class="form-check-label" for="tax_guam">Guam</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="tax_locations" value="singapore" id="tax_singapore">
+                            <label class="form-check-label" for="tax_singapore">Singapore</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billing Phases Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Billing Phases</h4>
+            </div>
+            <div class="card-body">
+                {{ phase_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Billing Phases</th>
+                                <th>Max. Amount</th>
+                                <th>Amount</th>
+                                <th>Subconsultant Fee 1</th>
+                                <th>Subconsultant Fee 2</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="phase-formset">
+                            {% for phase_form in phase_formset %}
+                            <tr class="phase-form">
+                                <td>
+                                    {{ phase_form.phase_name }}
+                                    {{ phase_form.custom_phase_name }}
+                                    {{ phase_form.order }}
+                                </td>
+                                <td>{{ phase_form.max_amount }}</td>
+                                <td>{{ phase_form.amount }}</td>
+                                <td>{{ phase_form.subconsultant_fee_1 }}</td>
+                                <td>{{ phase_form.subconsultant_fee_2 }}</td>
+                                <td>
+                                    {% if phase_form.instance.pk %}
+                                        {{ phase_form.DELETE }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="addPhaseForm()">Add Phase</button>
+            </div>
+        </div>
+
+        <!-- Additional Information Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Additional Billing and Project Information</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="{{ form.special_negotiated_rates.id_for_label }}">Special Negotiated Rates</label>
+                            {{ form.special_negotiated_rates }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="{{ form.special_invoice_instructions.id_for_label }}">Special Invoice Instructions</label>
+                            {{ form.special_invoice_instructions }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Retainer and Comments Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Retainer and Comments</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.retainer_received.id_for_label }}">Retainer Received</label>
+                            {{ form.retainer_received }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="{{ form.additional_comments.id_for_label }}">Additional Comments</label>
+                            {{ form.additional_comments }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="row">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Save PIF</button>
+                <a href="{% url 'billing:project_dashboard' project.id %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function addPhaseForm() {
+    const formset = document.getElementById('phase-formset');
+    const totalForms = document.getElementById('id_billingphase_set-TOTAL_FORMS');
+    const formNum = parseInt(totalForms.value);
+    
+    const newForm = document.createElement('tr');
+    newForm.className = 'phase-form';
+    newForm.innerHTML = `
+        <td>
+            <select name="billingphase_set-${formNum}-phase_name" id="id_billingphase_set-${formNum}-phase_name">
+                <option value="">---------</option>
+                <option value="professional_services">Professional Services</option>
+                <option value="programming">Programming</option>
+                <option value="schematic_design">Schematic Design</option>
+                <option value="design_development">Design Development</option>
+                <option value="construction_documents">Construction Documents</option>
+                <option value="bidding_negotiation">Bidding/Negotiation</option>
+                <option value="construction_administration">Construction Administration</option>
+                <option value="general">General</option>
+                <option value="other">Other</option>
+            </select>
+            <input type="text" name="billingphase_set-${formNum}-custom_phase_name" id="id_billingphase_set-${formNum}-custom_phase_name" placeholder="Custom phase name">
+            <input type="number" name="billingphase_set-${formNum}-order" id="id_billingphase_set-${formNum}-order" value="${formNum}">
+        </td>
+        <td><input type="number" name="billingphase_set-${formNum}-max_amount" id="id_billingphase_set-${formNum}-max_amount" step="0.01"></td>
+        <td><input type="number" name="billingphase_set-${formNum}-amount" id="id_billingphase_set-${formNum}-amount" step="0.01"></td>
+        <td><input type="number" name="billingphase_set-${formNum}-subconsultant_fee_1" id="id_billingphase_set-${formNum}-subconsultant_fee_1" step="0.01"></td>
+        <td><input type="number" name="billingphase_set-${formNum}-subconsultant_fee_2" id="id_billingphase_set-${formNum}-subconsultant_fee_2" step="0.01"></td>
+        <td></td>
+    `;
+    
+    formset.appendChild(newForm);
+    totalForms.value = formNum + 1;
+}
+</script>
+{% endblock %}

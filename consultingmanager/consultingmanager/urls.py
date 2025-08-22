@@ -34,6 +34,7 @@ urlpatterns = [
     path('clients/', include('clients.urls')),
     path('projects/', include('projects.urls')),
     path('files/', include('files.urls')),
+    path('billing/', include('billing.urls')),
     path('__debug__/', include('debug_toolbar.urls')),
     # Authentication URLs
     path('login/', auth_views.LoginView.as_view(), name='login'),

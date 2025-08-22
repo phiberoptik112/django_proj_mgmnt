@@ -1,0 +1,62 @@
+<div class="email-detail">
+    <div class="row">
+        <div class="col-md-8">
+            <h6><strong>From:</strong> {{ email.sender }}</h6>
+            <h6><strong>To:</strong> {{ email.to|default:"--" }}</h6>
+            <h6><strong>Date:</strong> {{ email.date|date:"F d, Y g:i A" }}</h6>
+            <h6><strong>Subject:</strong> {{ email.subject }}</h6>
+            
+            <hr>
+            
+            <div class="email-body">
+                <pre style="white-space: pre-wrap; font-family: inherit; background-color: #f8f9fa; padding: 15px; border-radius: 5px;">{{ email.body }}</pre>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <h6><strong>Attachments</strong></h6>
+            {% if email.attachments %}
+                {% for attachment in email.attachments %}
+                <div class="attachment-item mb-2 p-2 border rounded">
+                    <i class="fas fa-paperclip text-primary"></i>
+                    <a href="#" onclick="downloadAttachment('{{ attachment.filename }}')" class="ml-2">
+                        {{ attachment.filename }}
+                    </a>
+                    <small class="text-muted d-block mt-1">
+                        {{ attachment.size|filesizeformat }}
+                    </small>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No attachments</p>
+            {% endif %}
+            
+            <hr>
+            
+            <h6><strong>Billing References</strong></h6>
+            {% if billing_references %}
+                {% for ref in billing_references %}
+                <div class="billing-ref mb-2 p-2 border rounded">
+                    <span class="badge badge-primary">{{ ref.get_reference_type_display }}</span>
+                    <div class="mt-1">
+                        <strong>Invoice #{{ ref.billing_detail.invoice_number }}</strong><br>
+                        <small>${{ ref.billing_detail.amount }}</small>
+                    </div>
+                    {% if ref.notes %}
+                    <small class="text-muted d-block mt-1">{{ ref.notes }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No billing references</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadAttachment(filename) {
+    // This would need to be implemented based on your file storage system
+    alert('Download functionality for ' + filename + ' would be implemented here');
+}
+</script>

@@ -142,6 +142,32 @@ class ProjectMetadata(models.Model):
         verbose_name_plural = "Project Metadata"
         ordering = ['-updated_at']
 
+class DocumentSummary(models.Model):
+    """Stores Markdown and summaries generated from PDFs for easier billing context."""
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='document_summaries')
+    file = models.ForeignKey(File, on_delete=models.SET_NULL, null=True, blank=True, related_name='document_summaries')
+    source_path = models.CharField(max_length=1000, blank=True, help_text="Filesystem path if not from uploaded File")
+    title = models.CharField(max_length=255, help_text="Title inferred from the document", blank=True)
+    page_count = models.PositiveIntegerField(default=0)
+    markdown = models.TextField(help_text="Markdown representation of the PDF content")
+    summary = models.TextField(help_text="Concise summary for billing context")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, default='processed', choices=[
+        ('processed', 'Processed'),
+        ('failed', 'Failed'),
+    ])
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['project', 'created_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        base = self.title or (self.file.title if self.file else self.source_path)
+        return f"Summary for {base or 'document'}"
+
 class Email(models.Model):
     """Stores email data"""
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='emails')

@@ -70,6 +70,7 @@
                             <th>Budget Usage</th>
                             <th>Files</th>
                             <th>Last Activity</th>
+                            <th>Billing</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -106,6 +107,11 @@
                             </td>
                             <td>{{ project.files.count }}</td>
                             <td>{{ project.updated_at|date:"M d, Y" }}</td>
+                            <td>
+                                <a href="{% url 'billing:project_dashboard' project.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-dollar-sign"></i> Billing
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

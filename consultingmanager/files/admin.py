@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ProjectFolder, FileMetadata, ProjectAnalysis, File
+from .models import ProjectFolder, FileMetadata, ProjectAnalysis, File, DocumentSummary
 from projects.models import Project
 
 @admin.register(ProjectFolder)
@@ -31,3 +31,11 @@ class FileAdmin(admin.ModelAdmin):
     list_filter = ('file_type', 'project')
     search_fields = ('title', 'project__title')
     raw_id_fields = ('project',)
+
+@admin.register(DocumentSummary)
+class DocumentSummaryAdmin(admin.ModelAdmin):
+    list_display = ('project', 'title', 'file', 'page_count', 'status', 'created_at')
+    list_filter = ('status', 'project')
+    search_fields = ('title', 'project__title', 'source_path')
+    raw_id_fields = ('project', 'file')
+    readonly_fields = ('created_at', 'updated_at')

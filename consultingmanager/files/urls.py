@@ -22,4 +22,6 @@ urlpatterns = [
     path('proposal/<int:pk>/delete/', views.ProposalDeleteView.as_view(), name='proposal-delete'),
     ### End Proposal URLs
     path('proposals/import/<int:project_id>/', views.ProposalImportView.as_view(), name='proposal-import'),
+    # PDF Processing
+    path('process-pdfs/<int:project_id>/', views.BulkPdfProcessView.as_view(), name='process-pdfs'),
 ] 

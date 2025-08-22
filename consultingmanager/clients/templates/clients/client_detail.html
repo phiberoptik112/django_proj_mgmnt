@@ -56,7 +56,7 @@
                     <h5 class="card-title mb-0">Projects</h5>
                 </div>
                 <div class="card-body">
-                    {% if client.project_set.exists %}
+                    {% if client.projects.exists %}
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
@@ -69,7 +69,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for project in client.project_set.all %}
+                                    {% for project in client.projects.all %}
                                     <tr>
                                         <td>
                                             <a href="{% url 'projects:project-detail' project.pk %}">

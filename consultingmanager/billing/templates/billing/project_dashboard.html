@@ -1,0 +1,364 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Billing Dashboard - {{ project.title }}</h1>
+                    <p class="text-muted">Client: {{ project.client.name }}</p>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'projects:project-detail' project.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Project
+                    </a>
+                    <a href="{% url 'projects:project-dashboard' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt"></i> Projects Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Panel: PIF Data & Billing Summary -->
+        <div class="col-md-4">
+            <!-- PIF Status Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Project Information Form (PIF)</h4>
+                    {% if pif %}
+                        <span class="badge badge-success">Complete</span>
+                    {% else %}
+                        <span class="badge badge-warning">Incomplete</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if pif %}
+                        <div class="mb-3">
+                            <strong>Project Number:</strong> {{ pif.project_number|default:"Not set" }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Billing Contact:</strong> {{ pif.billing_contact|default:"Not set" }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Contract Amount:</strong> ${{ pif.fee_contract_amount|default:"0.00"|floatformat:2 }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Payment Terms:</strong> {{ pif.type_of_contract|default:"Not set" }}
+                        </div>
+                        <a href="{% url 'billing:pif_edit' project.id %}" class="btn btn-primary btn-sm">Edit PIF</a>
+                    {% else %}
+                        <p class="text-muted">No PIF data available</p>
+                        <div class="btn-group">
+                            <a href="{% url 'billing:pif_create' project.id %}" class="btn btn-success btn-sm">Create PIF</a>
+                            <a href="{% url 'billing:pif_create' project.id %}?prefill=1" class="btn btn-outline-success btn-sm" title="Prefill from client">
+                                <i class="fas fa-magic"></i> Prefill from Client
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Billing Summary Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Billing Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5>${{ billing_summary.total_invoiced|floatformat:2 }}</h5>
+                            <small>Total Invoiced</small>
+                        </div>
+                        <div class="col-6">
+                            <h5>${{ billing_summary.total_paid|floatformat:2 }}</h5>
+                            <small>Total Paid</small>
+                        </div>
+                    </div>
+                    <div class="row text-center mt-3">
+                        <div class="col-6">
+                            <h5>${{ billing_summary.outstanding|floatformat:2 }}</h5>
+                            <small>Outstanding</small>
+                        </div>
+                        <div class="col-6">
+                            <h5>{{ billing_summary.billable_hours|floatformat:1 }}</h5>
+                            <small>Billable Hours</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing Context Summaries -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Billing Context Summaries</h4>
+                    <form action="{% url 'files:process-pdfs' project.id %}" method="post" class="mb-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-magic"></i> Process PDFs
+                        </button>
+                    </form>
+                </div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    {% with summaries=project.document_summaries.all %}
+                        {% if summaries %}
+                            {% for ds in summaries|slice:':5' %}
+                                <div class="mb-3">
+                                    <strong>{{ ds.title|default:'Document' }}</strong>
+                                    <p class="small text-muted mb-1">{{ ds.summary }}</p>
+                                </div>
+                                {% if not forloop.last %}<hr>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No document summaries yet. Use "Process PDFs" to generate.</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <!-- PIF Billing Phases -->
+            {% if pif and pif.billing_phases.exists %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Billing Phases</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Phase</th>
+                                    <th>Amount</th>
+                                    <th>Sub 1</th>
+                                    <th>Sub 2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for phase in pif.billing_phases.all %}
+                                <tr>
+                                    <td>{{ phase.get_phase_display_name }}</td>
+                                    <td>${{ phase.amount|default:"0.00"|floatformat:2 }}</td>
+                                    <td>${{ phase.subconsultant_fee_1|default:"0.00"|floatformat:2 }}</td>
+                                    <td>${{ phase.subconsultant_fee_2|default:"0.00"|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            {% if pif_totals %}
+                            <tfoot class="table-warning">
+                                <tr>
+                                    <td><strong>Total</strong></td>
+                                    <td><strong>${{ pif_totals.total_amount|floatformat:2 }}</strong></td>
+                                    <td><strong>${{ pif_totals.total_subconsultant_1|floatformat:2 }}</strong></td>
+                                    <td><strong>${{ pif_totals.total_subconsultant_2|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tfoot>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Proposals -->
+            <div class="card">
+                <div class="card-header">
+                    <h4>Recent Proposals</h4>
+                </div>
+                <div class="card-body">
+                    {% for proposal in proposals %}
+                    <div class="mb-2">
+                        <strong>{{ proposal.date|date:"M d, Y" }}</strong><br>
+                        <small>{{ proposal.recipient_company }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No proposals found</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Email Timeline -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Email Communication Timeline</h4>
+                    <small class="text-muted">Click on emails to view details and link to billing records</small>
+                </div>
+                <div class="card-body" style="max-height: 700px; overflow-y: auto;">
+                    {% for month, emails in email_timeline.items %}
+                    <div class="timeline-month mb-4">
+                        <h5 class="text-muted border-bottom pb-2">{{ month|date:"F Y" }}</h5>
+                        
+                        {% for email in emails %}
+                        <div class="timeline-item border-left pl-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <strong class="text-primary">{{ email.sender }}</strong>
+                                        <span class="text-muted ml-2">{{ email.date|date:"M d, g:i A" }}</span>
+                                        {% if email.attachments %}
+                                        <span class="badge badge-info ml-2">
+                                            <i class="fas fa-paperclip"></i> {{ email.attachments|length }} attachment{{ email.attachments|length|pluralize }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="email-subject mb-2">
+                                        <strong>{{ email.subject }}</strong>
+                                    </div>
+                                    
+                                    <div class="email-preview text-muted mb-2">
+                                        {{ email.body|truncatewords:30 }}
+                                    </div>
+                                    
+                                    <!-- Billing References -->
+                                    {% if email.billing_references.all %}
+                                    <div class="billing-references mb-2">
+                                        {% for ref in email.billing_references.all %}
+                                        <span class="badge badge-secondary mr-1">
+                                            {{ ref.get_reference_type_display }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" 
+                                                onclick="showEmailDetail({{ email.id }})">
+                                            <i class="fas fa-eye"></i> View Details
+                                        </button>
+                                        <button class="btn btn-outline-secondary" 
+                                                onclick="linkToBilling({{ email.id }})">
+                                            <i class="fas fa-link"></i> Link to Billing
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No emails found for this project</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Detail Modal -->
+<div class="modal fade" id="emailDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Details</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="emailDetailContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Link to Billing Modal -->
+<div class="modal fade" id="linkBillingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Link Email to Billing</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="linkBillingForm">
+                    <div class="form-group">
+                        <label>Reference Type:</label>
+                        <select class="form-control" name="reference_type">
+                            <option value="invoice">Invoice Email</option>
+                            <option value="payment">Payment Email</option>
+                            <option value="proposal">Proposal Email</option>
+                            <option value="discussion">Billing Discussion</option>
+                            <option value="reminder">Payment Reminder</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Link to Billing Record:</label>
+                        <select class="form-control" name="billing_detail">
+                            <option value="">Select billing record...</option>
+                            {% for billing in billing_details %}
+                            <option value="{{ billing.id }}">
+                                Invoice #{{ billing.invoice_number }} - ${{ billing.amount }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes:</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveBillingLink()">Save Link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showEmailDetail(emailId) {
+    $.get(`/billing/email/${emailId}/detail/`, function(data) {
+        $('#emailDetailContent').html(data);
+        $('#emailDetailModal').modal('show');
+    });
+}
+
+function linkToBilling(emailId) {
+    $('#linkBillingForm').data('email-id', emailId);
+    $('#linkBillingModal').modal('show');
+}
+
+function saveBillingLink() {
+    const emailId = $('#linkBillingForm').data('email-id');
+    const formData = {
+        reference_type: $('select[name="reference_type"]').val(),
+        billing_detail: $('select[name="billing_detail"]').val(),
+        notes: $('textarea[name="notes"]').val()
+    };
+    
+    $.ajax({
+        url: `/billing/email/${emailId}/link/`,
+        method: 'POST',
+        data: JSON.stringify(formData),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                $('#linkBillingModal').modal('hide');
+                location.reload(); // Refresh to show new link
+            } else {
+                alert('Error saving link: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Error saving link');
+        }
+    });
+}
+</script>
+
+<!-- CSRF Token for AJAX requests -->
+{% csrf_token %}
+{% endblock %}
