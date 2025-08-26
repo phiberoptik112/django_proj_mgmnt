@@ -4,6 +4,7 @@ from . import views
 app_name = 'billing'
 
 urlpatterns = [
+    path('accounting/summary/', views.all_projects_invoicing_summary, name='invoicing_summary'),
     path('project/<int:project_id>/', views.project_billing_dashboard, name='project_dashboard'),
     path('pif/<int:project_id>/create/', views.pif_create, name='pif_create'),
     path('pif/<int:project_id>/edit/', views.pif_edit, name='pif_edit'),

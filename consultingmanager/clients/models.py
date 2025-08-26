@@ -13,6 +13,16 @@ class Client(models.Model):
     billing_contact_email = models.EmailField(blank=True, help_text="Billing contact email address")
     secondary_contact = models.CharField(max_length=200, blank=True, help_text="Secondary billing contact")
     secondary_contact_email = models.EmailField(blank=True, help_text="Secondary contact email")
+    # Accounting-focused fields
+    accounting_contact_name = models.CharField(max_length=200, blank=True, help_text="Primary accounting/AP contact name")
+    accounting_contact_email = models.EmailField(blank=True, help_text="Accounting/AP contact email")
+    INVOICE_FORMAT_CHOICES = [
+        ("standard_pdf", "Standard PDF via Email"),
+        ("portal_upload", "Client Portal Upload"),
+        ("edi_einvoice", "E-invoice / EDI"),
+        ("custom", "Custom Instructions"),
+    ]
+    invoice_format = models.CharField(max_length=32, choices=INVOICE_FORMAT_CHOICES, blank=True, help_text="Preferred invoice delivery format")
     special_negotiated_rates = models.TextField(blank=True)
     special_invoice_instructions = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
