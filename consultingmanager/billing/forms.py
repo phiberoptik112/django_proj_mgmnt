@@ -1,6 +1,7 @@
 from django import forms
 from django.forms import inlineformset_factory
 from .models import ProjectInformationForm, BillingPhase
+from clients.models import Client
 
 class ProjectInformationFormForm(forms.ModelForm):
     """Form for Project Information Form data entry"""
@@ -53,3 +54,39 @@ BillingPhaseFormSet = inlineformset_factory(
     fields=['phase_name', 'custom_phase_name', 'max_amount', 'amount', 
             'subconsultant_fee_1', 'subconsultant_fee_2', 'order']
 )
+
+
+class ClientBillingInstructionsForm(forms.ModelForm):
+    """Lightweight form to edit accounting-related client billing instructions."""
+
+    class Meta:
+        model = Client
+        fields = [
+            'accounting_contact_name',
+            'accounting_contact_email',
+            'invoice_format',
+            'special_negotiated_rates',
+            'special_invoice_instructions',
+        ]
+        widgets = {
+            'special_negotiated_rates': forms.Textarea(attrs={'rows': 3}),
+            'special_invoice_instructions': forms.Textarea(attrs={'rows': 4}),
+        }
+
+
+class ProjectBillingInstructionsForm(forms.ModelForm):
+    """Subset of PIF fields commonly needed for invoicing instructions."""
+
+    class Meta:
+        model = ProjectInformationForm
+        fields = [
+            'purchase_order_number',
+            'billing_contact',
+            'billing_contact_email',
+            'special_negotiated_rates',
+            'special_invoice_instructions',
+        ]
+        widgets = {
+            'special_negotiated_rates': forms.Textarea(attrs={'rows': 3}),
+            'special_invoice_instructions': forms.Textarea(attrs={'rows': 4}),
+        }

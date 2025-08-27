@@ -10,4 +10,7 @@ urlpatterns = [
     path('pif/<int:project_id>/edit/', views.pif_edit, name='pif_edit'),
     path('email/<int:email_id>/detail/', views.email_detail_modal, name='email_detail'),
     path('email/<int:email_id>/link/', views.link_email_to_billing, name='link_email'),
+    # Panel API endpoints
+    path('api/project/<int:project_id>/billing-instructions/', views.get_billing_instructions, name='get_billing_instructions'),
+    path('api/project/<int:project_id>/billing-instructions/save/', views.save_billing_instructions, name='save_billing_instructions'),
 ]

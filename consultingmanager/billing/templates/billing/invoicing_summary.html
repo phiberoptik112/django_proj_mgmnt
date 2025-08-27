@@ -36,8 +36,9 @@
   <a class="btn btn-secondary" href="?">Reset</a>
 </form>
 
-<div class="table-responsive">
-  <table class="table table-striped table-sm">
+<div style="display:flex; gap:1rem; align-items:flex-start;">
+  <div class="table-responsive" style="flex:1 1 60%;">
+  <table class="table table-striped table-sm" id="summary-table">
     <thead>
       <tr>
         <th>Client</th>
@@ -91,7 +92,160 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
+
+  <div style="flex:1 1 40%; border:1px solid #d9d9d9; padding:1rem; border-radius:4px;">
+    <h4 style="margin-top:0; text-align:center;">Special Invoicing Details</h4>
+
+    <div id="panel-empty" style="color:#777; text-align:center;">
+      Select a project row to view or edit billing instructions.
+    </div>
+
+    <div id="panel-forms" style="display:none;">
+      <div style="margin-bottom:0.5rem; font-weight:600;">Project</div>
+      <form id="project-form">
+        {% csrf_token %}
+        {{ project_form.non_field_errors }}
+        <div class="form-group">
+          <label>PO / Client Reference</label>
+          <input class="form-control" name="purchase_order_number" />
+        </div>
+        <div class="form-group">
+          <label>Billing Contact</label>
+          <input class="form-control" name="billing_contact" />
+        </div>
+        <div class="form-group">
+          <label>Billing Contact Email</label>
+          <input class="form-control" name="billing_contact_email" />
+        </div>
+        <div class="form-group">
+          <label>Special Negotiated Rates</label>
+          <textarea class="form-control" rows="3" name="special_negotiated_rates"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Special Invoice Instructions</label>
+          <textarea class="form-control" rows="4" name="special_invoice_instructions"></textarea>
+        </div>
+      </form>
+
+      <hr/>
+
+      <div style="margin-bottom:0.5rem; font-weight:600;">Client</div>
+      <form id="client-form">
+        {% csrf_token %}
+        {{ client_form.non_field_errors }}
+        <div class="form-group">
+          <label>Accounting Contact Name</label>
+          <input class="form-control" name="accounting_contact_name" />
+        </div>
+        <div class="form-group">
+          <label>Accounting Contact Email</label>
+          <input class="form-control" name="accounting_contact_email" />
+        </div>
+        <div class="form-group">
+          <label>Invoice Format</label>
+          <select class="form-control" name="invoice_format">
+            <option value="">—</option>
+            <option value="standard_pdf">Standard PDF via Email</option>
+            <option value="portal_upload">Client Portal Upload</option>
+            <option value="edi_einvoice">E-invoice / EDI</option>
+            <option value="custom">Custom Instructions</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Special Negotiated Rates</label>
+          <textarea class="form-control" rows="3" name="special_negotiated_rates"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Special Invoice Instructions</label>
+          <textarea class="form-control" rows="4" name="special_invoice_instructions"></textarea>
+        </div>
+      </form>
+
+      <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+        <button id="btn-save" class="btn btn-primary">Save</button>
+        <span id="save-status" style="align-self:center; color:#2b7; display:none;">Saved</span>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  (function() {
+    const table = document.getElementById('summary-table');
+    const panelEmpty = document.getElementById('panel-empty');
+    const panelForms = document.getElementById('panel-forms');
+    const projectForm = document.getElementById('project-form');
+    const clientForm = document.getElementById('client-form');
+    const btnSave = document.getElementById('btn-save');
+    const saveStatus = document.getElementById('save-status');
+    let currentProjectId = null;
+
+    function setFormValues(form, values) {
+      Object.keys(values || {}).forEach(k => {
+        const el = form.querySelector(`[name="${k}"]`);
+        if (el) el.value = values[k] ?? '';
+      });
+    }
+
+    function getFormValues(form) {
+      const data = {};
+      Array.from(form.elements).forEach(el => {
+        if (!el.name) return;
+        data[el.name] = el.value;
+      });
+      return data;
+    }
+
+    function selectRow(projectId) {
+      if (!projectId) return;
+      currentProjectId = projectId;
+      const url = `{% url 'billing:get_billing_instructions' 0 %}`.replace('/0/', '/' + projectId + '/');
+      fetch(url, {headers: {'X-Requested-With':'XMLHttpRequest'}})
+        .then(r => r.json())
+        .then(({success, data}) => {
+          if (!success) return;
+          setFormValues(projectForm, data.project);
+          setFormValues(clientForm, data.client);
+          panelEmpty.style.display = 'none';
+          panelForms.style.display = '';
+        });
+    }
+
+    table.addEventListener('click', function(e) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      const link = row.querySelector('a[href*="/billing/project/"]');
+      if (!link) return;
+      const m = link.href.match(/\/billing\/project\/(\d+)\//);
+      if (m) {
+        selectRow(m[1]);
+      }
+    });
+
+    btnSave.addEventListener('click', function() {
+      if (!currentProjectId) return;
+      const url = `{% url 'billing:save_billing_instructions' 0 %}`.replace('/0/', '/' + currentProjectId + '/');
+      const payload = {
+        project: getFormValues(projectForm),
+        client: getFormValues(clientForm)
+      };
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']").value,
+        },
+        body: JSON.stringify(payload)
+      }).then(r => r.json()).then(({success}) => {
+        saveStatus.style.display = success ? '' : 'none';
+        if (success) {
+          setTimeout(() => { saveStatus.style.display = 'none'; }, 1500);
+        }
+      });
+    });
+  })();
+</script>
 
 {% endblock %}
 

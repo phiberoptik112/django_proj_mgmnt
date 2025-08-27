@@ -15,7 +15,12 @@ from projects.models import Project, TimeEntry
 from clients.models import Client
 from files.models import Email, Proposal, FileMetadata
 from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference
-from .forms import ProjectInformationFormForm, BillingPhaseFormSet
+from .forms import (
+    ProjectInformationFormForm,
+    BillingPhaseFormSet,
+    ClientBillingInstructionsForm,
+    ProjectBillingInstructionsForm,
+)
 
 @staff_member_required
 def all_projects_invoicing_summary(request):
@@ -219,10 +224,90 @@ def all_projects_invoicing_summary(request):
             'project_type': project_type,
             'keyword': keyword,
             'order': order,
-        }
+        },
+        # Empty forms for the side panel (bound dynamically via JS)
+        'client_form': ClientBillingInstructionsForm(),
+        'project_form': ProjectBillingInstructionsForm(),
     }
 
     return render(request, 'billing/invoicing_summary.html', context)
+
+
+@login_required
+@require_http_methods(["GET"]) 
+def get_billing_instructions(request, project_id):
+    """Return combined client and project billing instruction fields for a project.
+    Used by the summary page panel to populate fields when a project row is selected.
+    """
+    project = get_object_or_404(Project, id=project_id)
+    client = project.client
+
+    pif = getattr(project, 'pif', None)
+
+    data = {
+        'client': {
+            'id': client.id,
+            'name': client.name,
+            'company': client.company,
+            'accounting_contact_name': client.accounting_contact_name,
+            'accounting_contact_email': client.accounting_contact_email,
+            'invoice_format': client.invoice_format,
+            'special_negotiated_rates': client.special_negotiated_rates,
+            'special_invoice_instructions': client.special_invoice_instructions,
+        },
+        'project': {
+            'id': project.id,
+            'title': project.title,
+            'purchase_order_number': getattr(pif, 'purchase_order_number', ''),
+            'billing_contact': getattr(pif, 'billing_contact', ''),
+            'billing_contact_email': getattr(pif, 'billing_contact_email', ''),
+            'special_negotiated_rates': getattr(pif, 'special_negotiated_rates', ''),
+            'special_invoice_instructions': getattr(pif, 'special_invoice_instructions', ''),
+        }
+    }
+
+    return JsonResponse({'success': True, 'data': data})
+
+
+@login_required
+@require_http_methods(["POST"]) 
+def save_billing_instructions(request, project_id):
+    """Save client and project-specific billing instruction fields from the panel.
+    This endpoint accepts JSON with 'client' and 'project' payloads.
+    """
+    project = get_object_or_404(Project, id=project_id)
+    client = project.client
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
+
+    client_payload = payload.get('client', {})
+    project_payload = payload.get('project', {})
+
+    # Update Client (partial)
+    client_form = ClientBillingInstructionsForm(client_payload, instance=client)
+    client_ok = client_form.is_valid()
+
+    # Ensure a PIF exists for project fields
+    pif = getattr(project, 'pif', None)
+    if pif is None:
+        pif = ProjectInformationForm.objects.create(project=project)
+
+    project_form = ProjectBillingInstructionsForm(project_payload, instance=pif)
+    project_ok = project_form.is_valid()
+
+    if client_ok and project_ok:
+        client_form.save()
+        project_form.save()
+        return JsonResponse({'success': True})
+
+    errors = {
+        'client': client_form.errors,
+        'project': project_form.errors,
+    }
+    return JsonResponse({'success': False, 'errors': errors}, status=400)
 
 @login_required
 def project_billing_dashboard(request, project_id):
