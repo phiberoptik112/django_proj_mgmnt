@@ -42,6 +42,16 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'recitem-dashboard' %}active{% endif %}" 
                            href="{% url 'projects:recitem-dashboard' %}">RecItems</a>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'billing' %}active{% endif %}" 
+                           href="#" id="billingDropdown" role="button" data-bs-toggle="dropdown">
+                            Billing
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'billing:invoicing_summary' %}">Accounting Summary</a></li>
+                            <li><a class="dropdown-item" href="{% url 'billing:pif_scanner_dashboard' %}">PIF Scanner</a></li>
+                        </ul>
+                    </li>
                 </ul>
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav ms-auto">

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference
+from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference, PIFScanBatch, PIFScanSchedule, PIFScanResult
 
 class BillingPhaseInline(admin.TabularInline):
     model = BillingPhase
@@ -70,3 +70,108 @@ class BillingDetailAdmin(admin.ModelAdmin):
     list_filter = ['status', 'billing_type', 'invoice_date', 'due_date']
     search_fields = ['invoice_number', 'project__title', 'project__client__name']
     readonly_fields = ['created_at', 'updated_at']
+
+@admin.register(PIFScanResult)
+class PIFScanResultAdmin(admin.ModelAdmin):
+    list_display = ['project_number', 'project_name', 'status', 'folder_kind', 'scan_batch', 'created_at']
+    list_filter = ['status', 'folder_kind', 'scan_batch', 'created_at']
+    search_fields = ['project_number', 'project_name', 'container_dir', 'pif_file']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Scan Information', {
+            'fields': ('scan_batch', 'status', 'reason')
+        }),
+        ('Project Information', {
+            'fields': ('project_number', 'project_name', 'project')
+        }),
+        ('File Information', {
+            'fields': ('container_dir', 'folder_kind', 'pif_file', 'files_count', 'rows')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+class PIFScanResultInline(admin.TabularInline):
+    model = PIFScanResult
+    extra = 0
+    readonly_fields = ['project_number', 'project_name', 'status', 'folder_kind', 'created_at']
+    fields = ['project_number', 'project_name', 'status', 'folder_kind', 'created_at']
+    can_delete = False
+    max_num = 50
+
+@admin.register(PIFScanBatch)
+class PIFScanBatchAdmin(admin.ModelAdmin):
+    list_display = ['name', 'status', 'total_scanned', 'total_ingested', 'total_errors', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at', 'started_at', 'completed_at']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Batch Information', {
+            'fields': ('name', 'description', 'status')
+        }),
+        ('Scan Configuration', {
+            'fields': ('year_folders',)
+        }),
+        ('Results', {
+            'fields': ('total_scanned', 'total_ingested', 'total_skipped', 'total_errors')
+        }),
+        ('Logging', {
+            'fields': ('log_file', 'error_summary'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'started_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    inlines = [PIFScanResultInline]
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('scan_results')
+
+@admin.register(PIFScanSchedule)
+class PIFScanScheduleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'frequency', 'is_active', 'last_run', 'next_run', 'created_at']
+    list_filter = ['frequency', 'is_active', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at', 'last_run']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Schedule Information', {
+            'fields': ('name', 'description', 'frequency', 'is_active')
+        }),
+        ('Configuration', {
+            'fields': ('year_folders',)
+        }),
+        ('Timing', {
+            'fields': ('last_run', 'next_run'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['run_schedule']
+    
+    def run_schedule(self, request, queryset):
+        """Run the selected schedules"""
+        from django.core.management import call_command
+        
+        for schedule in queryset:
+            try:
+                call_command('run_pif_scans', schedule_id=schedule.id, force=True)
+                self.message_user(request, f'Successfully ran schedule: {schedule.name}')
+            except Exception as e:
+                self.message_user(request, f'Error running schedule {schedule.name}: {str(e)}', level='ERROR')
+    
+    run_schedule.short_description = "Run selected schedules"

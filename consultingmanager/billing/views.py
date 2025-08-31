@@ -10,16 +10,20 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
 from decimal import Decimal
+from django.core.paginator import Paginator
 
 from projects.models import Project, TimeEntry
 from clients.models import Client
 from files.models import Email, Proposal, FileMetadata
-from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference
+from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference, PIFScanBatch, PIFScanSchedule, PIFScanResult
 from .forms import (
     ProjectInformationFormForm,
     BillingPhaseFormSet,
     ClientBillingInstructionsForm,
     ProjectBillingInstructionsForm,
+    PIFScanBatchForm,
+    PIFScanScheduleForm,
+    PIFScanCSVImportForm,
 )
 
 @staff_member_required
@@ -515,3 +519,304 @@ def link_email_to_billing(request, email_id):
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+# PIF Scanner Views
+@staff_member_required
+def pif_scanner_dashboard(request):
+    """Main dashboard for PIF scanner management"""
+    # Get recent scan batches
+    recent_batches = PIFScanBatch.objects.all()[:10]
+    
+    # Get active schedules
+    active_schedules = PIFScanSchedule.objects.filter(is_active=True)
+    
+    # Get scan statistics
+    total_scanned = PIFScanResult.objects.count()
+    total_ingested = PIFScanResult.objects.filter(status='ingested').count()
+    total_errors = PIFScanResult.objects.filter(status='error').count()
+    
+    context = {
+        'recent_batches': recent_batches,
+        'active_schedules': active_schedules,
+        'stats': {
+            'total_scanned': total_scanned,
+            'total_ingested': total_ingested,
+            'total_errors': total_errors,
+            'success_rate': (total_ingested / total_scanned * 100) if total_scanned > 0 else 0
+        }
+    }
+    
+    return render(request, 'billing/pif_scanner_dashboard.html', context)
+
+@staff_member_required
+def pif_scan_batch_create(request):
+    """Create a new PIF scan batch"""
+    if request.method == 'POST':
+        form = PIFScanBatchForm(request.POST)
+        if form.is_valid():
+            batch = form.save()
+            messages.success(request, f'Scan batch "{batch.name}" created successfully.')
+            return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
+    else:
+        form = PIFScanBatchForm()
+    
+    context = {
+        'form': form,
+        'is_create': True,
+    }
+    
+    return render(request, 'billing/pif_scan_batch_form.html', context)
+
+@staff_member_required
+def pif_scan_batch_detail(request, batch_id):
+    """View details of a PIF scan batch"""
+    batch = get_object_or_404(PIFScanBatch, id=batch_id)
+    scan_results = batch.scan_results.all()[:50]  # Show first 50 results
+    
+    context = {
+        'batch': batch,
+        'scan_results': scan_results,
+        'stats': batch.get_summary_stats(),
+    }
+    
+    return render(request, 'billing/pif_scan_batch_detail.html', context)
+
+@staff_member_required
+def run_pif_scan_batch(request, batch_id):
+    """Run a PIF scan batch"""
+    batch = get_object_or_404(PIFScanBatch, id=batch_id)
+    
+    if request.method == 'POST':
+        # Start the scan process
+        batch.status = 'running'
+        batch.started_at = timezone.now()
+        batch.save()
+        
+        # In a real implementation, this would be a background task
+        # For now, we'll simulate the process
+        try:
+            # Import and run the scanner
+            from .utils.pif_scanner import PIFScanner
+            scanner = PIFScanner()
+            
+            for folder_path in batch.year_folders:
+                results = scanner.scan_year_folder(folder_path)
+                for result_data in results:
+                    # Create scan result
+                    scan_result = PIFScanResult.objects.create(
+                        scan_batch=batch,
+                        container_dir=result_data.get('container_dir', ''),
+                        folder_kind=result_data.get('folder_kind', ''),
+                        pif_file=result_data.get('pif_file', ''),
+                        files_count=result_data.get('files_count'),
+                        rows=result_data.get('rows'),
+                        status=result_data.get('status', 'skipped'),
+                        reason=result_data.get('reason', ''),
+                    )
+                    scan_result.extract_project_info_from_path()
+                    scan_result.save()
+            
+            # Update batch statistics
+            batch.total_scanned = batch.scan_results.count()
+            batch.total_ingested = batch.scan_results.filter(status='ingested').count()
+            batch.total_skipped = batch.scan_results.filter(status='skipped').count()
+            batch.total_errors = batch.scan_results.filter(status='error').count()
+            batch.status = 'completed'
+            batch.completed_at = timezone.now()
+            batch.save()
+            
+            messages.success(request, f'Scan batch "{batch.name}" completed successfully.')
+            
+        except Exception as e:
+            batch.status = 'failed'
+            batch.error_summary = str(e)
+            batch.save()
+            messages.error(request, f'Scan batch failed: {str(e)}')
+    
+    return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
+
+@staff_member_required
+def pif_scan_results(request, batch_id):
+    """View all results for a scan batch"""
+    batch = get_object_or_404(PIFScanBatch, id=batch_id)
+    scan_results = batch.scan_results.all()
+    
+    # Filtering
+    status_filter = request.GET.get('status')
+    if status_filter:
+        scan_results = scan_results.filter(status=status_filter)
+    
+    # Search
+    search = request.GET.get('search')
+    if search:
+        scan_results = scan_results.filter(
+            Q(project_number__icontains=search) |
+            Q(project_name__icontains=search) |
+            Q(container_dir__icontains=search)
+        )
+    
+    # Pagination
+    paginator = Paginator(scan_results, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'batch': batch,
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'search': search,
+    }
+    
+    return render(request, 'billing/pif_scan_results.html', context)
+
+@staff_member_required
+def pif_scan_schedule_create(request):
+    """Create a new PIF scan schedule"""
+    if request.method == 'POST':
+        form = PIFScanScheduleForm(request.POST)
+        if form.is_valid():
+            schedule = form.save()
+            messages.success(request, f'Scan schedule "{schedule.name}" created successfully.')
+            return redirect('billing:pif_scan_schedule_detail', schedule_id=schedule.id)
+    else:
+        form = PIFScanScheduleForm()
+    
+    context = {
+        'form': form,
+        'is_create': True,
+    }
+    
+    return render(request, 'billing/pif_scan_schedule_form.html', context)
+
+@staff_member_required
+def pif_scan_schedule_detail(request, schedule_id):
+    """View details of a PIF scan schedule"""
+    schedule = get_object_or_404(PIFScanSchedule, id=schedule_id)
+    
+    context = {
+        'schedule': schedule,
+    }
+    
+    return render(request, 'billing/pif_scan_schedule_detail.html', context)
+
+@staff_member_required
+def toggle_pif_scan_schedule(request, schedule_id):
+    """Toggle a PIF scan schedule on/off"""
+    schedule = get_object_or_404(PIFScanSchedule, id=schedule_id)
+    
+    if request.method == 'POST':
+        schedule.is_active = not schedule.is_active
+        schedule.save()
+        
+        status = 'activated' if schedule.is_active else 'deactivated'
+        messages.success(request, f'Scan schedule "{schedule.name}" {status}.')
+    
+    return redirect('billing:pif_scan_schedule_detail', schedule_id=schedule.id)
+
+@staff_member_required
+def import_pif_scan_csv(request):
+    """Import PIF scan results from CSV file"""
+    if request.method == 'POST':
+        form = PIFScanCSVImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            csv_file = form.cleaned_data['csv_file']
+            batch_name = form.cleaned_data['batch_name']
+            description = form.cleaned_data['description']
+            update_existing = form.cleaned_data['update_existing']
+            
+            try:
+                # Create batch
+                batch = PIFScanBatch.objects.create(
+                    name=batch_name,
+                    description=description,
+                    status='completed'
+                )
+                
+                # Import CSV data
+                import csv
+                import io
+                
+                csv_content = csv_file.read().decode('utf-8')
+                csv_reader = csv.DictReader(io.StringIO(csv_content))
+                
+                imported_count = 0
+                for row in csv_reader:
+                    # Check if result already exists
+                    existing = None
+                    if update_existing:
+                        existing = PIFScanResult.objects.filter(
+                            container_dir=row.get('container_dir', ''),
+                            scan_batch__name=batch_name
+                        ).first()
+                    
+                    if existing and update_existing:
+                        # Update existing
+                        existing.status = row.get('status', 'skipped')
+                        existing.reason = row.get('reason', '')
+                        existing.pif_file = row.get('pif_file', '')
+                        existing.files_count = int(row.get('files_count', 0)) if row.get('files_count') else None
+                        existing.rows = int(row.get('rows', 0)) if row.get('rows') else None
+                        existing.save()
+                    else:
+                        # Create new
+                        scan_result = PIFScanResult.objects.create(
+                            scan_batch=batch,
+                            container_dir=row.get('container_dir', ''),
+                            folder_kind=row.get('folder_kind', ''),
+                            pif_file=row.get('pif_file', ''),
+                            files_count=int(row.get('files_count', 0)) if row.get('files_count') else None,
+                            rows=int(row.get('rows', 0)) if row.get('rows') else None,
+                            status=row.get('status', 'skipped'),
+                            reason=row.get('reason', ''),
+                        )
+                        scan_result.extract_project_info_from_path()
+                        scan_result.save()
+                    
+                    imported_count += 1
+                
+                # Update batch statistics
+                batch.total_scanned = batch.scan_results.count()
+                batch.total_ingested = batch.scan_results.filter(status='ingested').count()
+                batch.total_skipped = batch.scan_results.filter(status='skipped').count()
+                batch.total_errors = batch.scan_results.filter(status='error').count()
+                batch.completed_at = timezone.now()
+                batch.save()
+                
+                messages.success(request, f'Successfully imported {imported_count} scan results.')
+                return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
+                
+            except Exception as e:
+                messages.error(request, f'Error importing CSV: {str(e)}')
+    else:
+        form = PIFScanCSVImportForm()
+    
+    context = {
+        'form': form,
+    }
+    
+    return render(request, 'billing/pif_scan_csv_import.html', context)
+
+@staff_member_required
+def pif_project_search(request):
+    """API endpoint for searching PIF scan results by project"""
+    query = request.GET.get('q', '')
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # Search in scan results
+    scan_results = PIFScanResult.objects.filter(
+        Q(project_number__icontains=query) |
+        Q(project_name__icontains=query)
+    ).filter(status='ingested')[:10]
+    
+    results = []
+    for result in scan_results:
+        results.append({
+            'id': result.id,
+            'project_number': result.project_number,
+            'project_name': result.project_name,
+            'pif_file': result.pif_file,
+            'container_dir': result.container_dir,
+        })
+    
+    return JsonResponse({'results': results})

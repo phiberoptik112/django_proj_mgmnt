@@ -1,0 +1,168 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Import PIF Scan CSV - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Import PIF Scan Results from CSV</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.csv_file.id_for_label }}" class="form-label">PIF Scan Results CSV</label>
+                            <input type="file" class="form-control {% if form.csv_file.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.csv_file.id_for_label }}" name="{{ form.csv_file.name }}" accept=".csv" required>
+                            {% if form.csv_file.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.csv_file.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Upload a CSV file with PIF scan results. Expected columns: container_dir, folder_kind, status, reason, pif_file, pif_files, files_count, rows</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.batch_name.id_for_label }}" class="form-label">Batch Name</label>
+                            <input type="text" class="form-control {% if form.batch_name.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.batch_name.id_for_label }}" name="{{ form.batch_name.name }}" 
+                                   value="{{ form.batch_name.value|default:'' }}" required>
+                            {% if form.batch_name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.batch_name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Name for this import batch</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                      id="{{ form.description.id_for_label }}" name="{{ form.description.name }}" 
+                                      rows="3">{{ form.description.value|default:'' }}</textarea>
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Optional description of this import</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input {% if form.update_existing.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.update_existing.id_for_label }}" name="{{ form.update_existing.name }}" 
+                                       {% if form.update_existing.value %}checked{% endif %}>
+                                <label class="form-check-label" for="{{ form.update_existing.id_for_label }}">
+                                    Update Existing Results
+                                </label>
+                                {% if form.update_existing.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.update_existing.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <div class="form-text">Update existing scan results if they exist</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'billing:pif_scanner_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Import CSV
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- CSV Format Help -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">CSV Format Requirements</h6>
+                </div>
+                <div class="card-body">
+                    <p>The CSV file should contain the following columns:</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Description</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>container_dir</code></td>
+                                    <td>Full path to the container directory</td>
+                                    <td>Yes</td>
+                                </tr>
+                                <tr>
+                                    <td><code>folder_kind</code></td>
+                                    <td>Type of folder (Business, Documents, etc.)</td>
+                                    <td>No</td>
+                                </tr>
+                                <tr>
+                                    <td><code>status</code></td>
+                                    <td>Scan status (ingested, skipped, error)</td>
+                                    <td>Yes</td>
+                                </tr>
+                                <tr>
+                                    <td><code>reason</code></td>
+                                    <td>Reason for status (ok, no_pif_found, error message)</td>
+                                    <td>No</td>
+                                </tr>
+                                <tr>
+                                    <td><code>pif_file</code></td>
+                                    <td>Full path to the PIF file if found</td>
+                                    <td>No</td>
+                                </tr>
+                                <tr>
+                                    <td><code>files_count</code></td>
+                                    <td>Number of files in the directory</td>
+                                    <td>No</td>
+                                </tr>
+                                <tr>
+                                    <td><code>rows</code></td>
+                                    <td>Number of rows in the PIF file</td>
+                                    <td>No</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6>Example CSV Format:</h6>
+                        <pre><code>container_dir,folder_kind,status,reason,pif_file,files_count,rows
+/Volumes/KAILUA PROJECTS/2023/23-001 Hickam AFB Acoustical Testing/Business,Business,ingested,ok,/Volumes/KAILUA PROJECTS/2023/23-001 Hickam AFB Acoustical Testing/Business/PIFX 23-001_Revised 230405.xlsx,1,529
+/Volumes/KAILUA PROJECTS/2023/23-001 Hickam AFB Acoustical Testing/Documents,Documents,skipped,no_pif_found,,,</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

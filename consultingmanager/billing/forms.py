@@ -2,6 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from .models import ProjectInformationForm, BillingPhase
 from clients.models import Client
+from .models import PIFScanBatch, PIFScanSchedule
 
 class ProjectInformationFormForm(forms.ModelForm):
     """Form for Project Information Form data entry"""
@@ -90,3 +91,91 @@ class ProjectBillingInstructionsForm(forms.ModelForm):
             'special_negotiated_rates': forms.Textarea(attrs={'rows': 3}),
             'special_invoice_instructions': forms.Textarea(attrs={'rows': 4}),
         }
+
+class PIFScanBatchForm(forms.ModelForm):
+    """Form for creating PIF scan batches"""
+    
+    class Meta:
+        model = PIFScanBatch
+        fields = ['name', 'description', 'year_folders']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 2023 Projects Scan'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description of what this scan covers'}),
+            'year_folders': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 5, 
+                'placeholder': 'Enter one folder path per line:\n/Volumes/KAILUA PROJECTS/2023\n/Volumes/KAILUA PROJECTS/2024'
+            }),
+        }
+    
+    def clean_year_folders(self):
+        """Convert textarea input to JSON list"""
+        folders_text = self.cleaned_data.get('year_folders')
+        if folders_text:
+            # Split by lines and clean up
+            folders = [folder.strip() for folder in folders_text.split('\n') if folder.strip()]
+            return folders
+        return []
+
+class PIFScanScheduleForm(forms.ModelForm):
+    """Form for creating PIF scan schedules"""
+    
+    class Meta:
+        model = PIFScanSchedule
+        fields = ['name', 'description', 'frequency', 'year_folders', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Weekly 2023-2024 Scan'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description of this schedule'}),
+            'frequency': forms.Select(attrs={'class': 'form-control'}),
+            'year_folders': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 5, 
+                'placeholder': 'Enter one folder path per line:\n/Volumes/KAILUA PROJECTS/2023\n/Volumes/KAILUA PROJECTS/2024'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def clean_year_folders(self):
+        """Convert textarea input to JSON list"""
+        folders_text = self.cleaned_data.get('year_folders')
+        if folders_text:
+            # Split by lines and clean up
+            folders = [folder.strip() for folder in folders_text.split('\n') if folder.strip()]
+            return folders
+        return []
+
+class PIFScanCSVImportForm(forms.Form):
+    """Form for importing PIF scan results from CSV"""
+    csv_file = forms.FileField(
+        label='PIF Scan Results CSV',
+        help_text='Upload a CSV file with PIF scan results',
+        widget=forms.FileInput(attrs={'accept': '.csv', 'class': 'form-control'})
+    )
+    batch_name = forms.CharField(
+        label='Batch Name',
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Imported from CSV'}),
+        help_text='Name for this import batch'
+    )
+    description = forms.CharField(
+        label='Description',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description of this import'}),
+        help_text='Optional description of this import'
+    )
+    update_existing = forms.BooleanField(
+        label='Update Existing Results',
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text='Update existing scan results if they exist'
+    )
+
+    def clean_csv_file(self):
+        file = self.cleaned_data.get('csv_file')
+        if file:
+            if not file.name.endswith('.csv'):
+                raise forms.ValidationError('Only CSV files are allowed.')
+            if file.size > 10 * 1024 * 1024:  # 10MB limit
+                raise forms.ValidationError('File size must be less than 10MB.')
+        return file

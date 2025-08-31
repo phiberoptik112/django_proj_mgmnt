@@ -164,3 +164,145 @@ class BillingEmailReference(models.Model):
     class Meta:
         verbose_name = "Billing Email Reference"
         verbose_name_plural = "Billing Email References"
+
+class PIFScanResult(models.Model):
+    """Stores results from PIF scanner runs"""
+    SCAN_STATUS_CHOICES = [
+        ('ingested', 'Ingested'),
+        ('skipped', 'Skipped'),
+        ('error', 'Error'),
+    ]
+    
+    # Scan identification
+    scan_batch = models.ForeignKey('PIFScanBatch', on_delete=models.CASCADE, related_name='scan_results')
+    project_number = models.CharField(max_length=50, blank=True, help_text="Extracted project number from path")
+    project_name = models.CharField(max_length=200, blank=True, help_text="Extracted project name from path")
+    
+    # File information
+    container_dir = models.TextField(help_text="Full path to the container directory")
+    folder_kind = models.CharField(max_length=50, blank=True, help_text="Type of folder (Business, Documents, etc.)")
+    pif_file = models.TextField(blank=True, help_text="Full path to the PIF file if found")
+    files_count = models.IntegerField(null=True, blank=True, help_text="Number of files in the directory")
+    rows = models.IntegerField(null=True, blank=True, help_text="Number of rows in the PIF file")
+    
+    # Scan results
+    status = models.CharField(max_length=20, choices=SCAN_STATUS_CHOICES, default='skipped')
+    reason = models.TextField(blank=True, help_text="Reason for status (ok, no_pif_found, error message)")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Link to project if found
+    project = models.ForeignKey('projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='pif_scan_results')
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "PIF Scan Result"
+        verbose_name_plural = "PIF Scan Results"
+    
+    def __str__(self):
+        return f"{self.project_number} - {self.project_name} ({self.status})"
+    
+    def extract_project_info_from_path(self):
+        """Extract project number and name from the container directory path"""
+        import re
+        from pathlib import Path
+        
+        path = Path(self.container_dir)
+        # Look for project number pattern (e.g., 23-001, P23-001)
+        project_match = re.search(r'([P]?\d{2}-\d{3})', path.name)
+        if project_match:
+            self.project_number = project_match.group(1)
+            # Extract project name (everything after the project number)
+            name_parts = path.name.split(project_match.group(1), 1)
+            if len(name_parts) > 1:
+                self.project_name = name_parts[1].strip(' -_')
+            else:
+                self.project_name = path.name
+        else:
+            self.project_name = path.name
+
+class PIFScanBatch(models.Model):
+    """Represents a batch of PIF scans"""
+    BATCH_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    name = models.CharField(max_length=200, help_text="Name for this scan batch")
+    description = models.TextField(blank=True, help_text="Description of what this scan covers")
+    
+    # Scan configuration
+    year_folders = models.JSONField(default=list, help_text="List of year folder paths to scan")
+    scan_date = models.DateTimeField(auto_now_add=True)
+    
+    # Results
+    status = models.CharField(max_length=20, choices=BATCH_STATUS_CHOICES, default='pending')
+    total_scanned = models.IntegerField(default=0)
+    total_ingested = models.IntegerField(default=0)
+    total_skipped = models.IntegerField(default=0)
+    total_errors = models.IntegerField(default=0)
+    
+    # Logging
+    log_file = models.TextField(blank=True, help_text="Path to scan log file")
+    error_summary = models.TextField(blank=True, help_text="Summary of errors encountered")
+    
+    # Timestamps
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "PIF Scan Batch"
+        verbose_name_plural = "PIF Scan Batches"
+    
+    def __str__(self):
+        return f"{self.name} ({self.status}) - {self.scan_date.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_summary_stats(self):
+        """Get summary statistics for this batch"""
+        return {
+            'total': self.total_scanned,
+            'ingested': self.total_ingested,
+            'skipped': self.total_skipped,
+            'errors': self.total_errors,
+            'success_rate': (self.total_ingested / self.total_scanned * 100) if self.total_scanned > 0 else 0
+        }
+
+class PIFScanSchedule(models.Model):
+    """Schedule for periodic PIF scanning"""
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('manual', 'Manual Only'),
+    ]
+    
+    name = models.CharField(max_length=200, help_text="Name for this schedule")
+    description = models.TextField(blank=True)
+    
+    # Schedule configuration
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='manual')
+    year_folders = models.JSONField(default=list, help_text="List of year folder paths to scan")
+    
+    # Schedule details
+    is_active = models.BooleanField(default=True, help_text="Whether this schedule is active")
+    last_run = models.DateTimeField(null=True, blank=True)
+    next_run = models.DateTimeField(null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "PIF Scan Schedule"
+        verbose_name_plural = "PIF Scan Schedules"
+    
+    def __str__(self):
+        return f"{self.name} ({self.frequency})"

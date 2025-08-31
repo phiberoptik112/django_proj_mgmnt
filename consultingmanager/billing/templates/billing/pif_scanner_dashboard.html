@@ -1,0 +1,231 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}PIF Scanner Dashboard - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">PIF Scanner Dashboard</h1>
+                    <p class="text-muted">Manage Project Information Form scanning and database</p>
+                </div>
+                <div class="btn-group">
+                    <a href="{% url 'billing:pif_scan_batch_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Scan Batch
+                    </a>
+                    <a href="{% url 'billing:pif_scan_schedule_create' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-clock"></i> New Schedule
+                    </a>
+                    <a href="{% url 'billing:import_pif_scan_csv' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-upload"></i> Import CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total_scanned }}</h4>
+                            <p class="card-text">Total Scanned</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-search fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total_ingested }}</h4>
+                            <p class="card-text">Successfully Ingested</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.success_rate|floatformat:1 }}%</h4>
+                            <p class="card-text">Success Rate</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-percentage fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total_errors }}</h4>
+                            <p class="card-text">Errors</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Scan Batches -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Scan Batches</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_batches %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Status</th>
+                                        <th>Scanned</th>
+                                        <th>Ingested</th>
+                                        <th>Errors</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for batch in recent_batches %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'billing:pif_scan_batch_detail' batch.id %}">
+                                                {{ batch.name }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if batch.status == 'completed' %}success{% elif batch.status == 'running' %}warning{% elif batch.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                                                {{ batch.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ batch.total_scanned }}</td>
+                                        <td>{{ batch.total_ingested }}</td>
+                                        <td>{{ batch.total_errors }}</td>
+                                        <td>{{ batch.created_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'billing:pif_scan_batch_detail' batch.id %}" class="btn btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if batch.status == 'pending' %}
+                                                <form method="post" action="{% url 'billing:run_pif_scan_batch' batch.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-success">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No scan batches found. <a href="{% url 'billing:pif_scan_batch_create' %}">Create your first batch</a>.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Schedules -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Active Scan Schedules</h5>
+                </div>
+                <div class="card-body">
+                    {% if active_schedules %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Frequency</th>
+                                        <th>Last Run</th>
+                                        <th>Next Run</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for schedule in active_schedules %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'billing:pif_scan_schedule_detail' schedule.id %}">
+                                                {{ schedule.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ schedule.get_frequency_display }}</td>
+                                        <td>
+                                            {% if schedule.last_run %}
+                                                {{ schedule.last_run|date:"M d, Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if schedule.next_run %}
+                                                {{ schedule.next_run|date:"M d, Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">Not scheduled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'billing:pif_scan_schedule_detail' schedule.id %}" class="btn btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <form method="post" action="{% url 'billing:toggle_pif_scan_schedule' schedule.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-warning">
+                                                        <i class="fas fa-pause"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No active schedules found. <a href="{% url 'billing:pif_scan_schedule_create' %}">Create a schedule</a>.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

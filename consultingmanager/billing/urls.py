@@ -13,4 +13,16 @@ urlpatterns = [
     # Panel API endpoints
     path('api/project/<int:project_id>/billing-instructions/', views.get_billing_instructions, name='get_billing_instructions'),
     path('api/project/<int:project_id>/billing-instructions/save/', views.save_billing_instructions, name='save_billing_instructions'),
+    
+    # PIF Scanner URLs
+    path('pif-scanner/', views.pif_scanner_dashboard, name='pif_scanner_dashboard'),
+    path('pif-scanner/batch/create/', views.pif_scan_batch_create, name='pif_scan_batch_create'),
+    path('pif-scanner/batch/<int:batch_id>/', views.pif_scan_batch_detail, name='pif_scan_batch_detail'),
+    path('pif-scanner/batch/<int:batch_id>/run/', views.run_pif_scan_batch, name='run_pif_scan_batch'),
+    path('pif-scanner/batch/<int:batch_id>/results/', views.pif_scan_results, name='pif_scan_results'),
+    path('pif-scanner/schedule/create/', views.pif_scan_schedule_create, name='pif_scan_schedule_create'),
+    path('pif-scanner/schedule/<int:schedule_id>/', views.pif_scan_schedule_detail, name='pif_scan_schedule_detail'),
+    path('pif-scanner/schedule/<int:schedule_id>/toggle/', views.toggle_pif_scan_schedule, name='toggle_pif_scan_schedule'),
+    path('pif-scanner/import-csv/', views.import_pif_scan_csv, name='import_pif_scan_csv'),
+    path('pif-scanner/api/project-search/', views.pif_project_search, name='pif_project_search'),
 ]
