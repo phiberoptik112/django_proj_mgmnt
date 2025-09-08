@@ -111,6 +111,9 @@ class Command(BaseCommand):
                             scan_result.extract_project_info_from_path()
                             scan_result.save()
                             
+                            # Try to automatically link to existing project
+                            scan_result.link_to_project()
+                            
                             total_scanned += 1
                             if result_data.get('status') == 'ingested':
                                 total_ingested += 1
@@ -123,11 +126,14 @@ class Command(BaseCommand):
                         self.stderr.write(self.style.ERROR(f'Error scanning {folder_path}: {str(e)}'))
                         total_errors += 1
                 
+                # Consolidate duplicates
+                consolidated_count, deleted_count = PIFScanResult.consolidate_duplicates(batch)
+                
                 # Update batch statistics
-                batch.total_scanned = total_scanned
-                batch.total_ingested = total_ingested
-                batch.total_skipped = total_skipped
-                batch.total_errors = total_errors
+                batch.total_scanned = batch.scan_results.count()
+                batch.total_ingested = batch.scan_results.filter(status='ingested').count()
+                batch.total_skipped = batch.scan_results.filter(status='skipped').count()
+                batch.total_errors = batch.scan_results.filter(status='error').count()
                 batch.status = 'completed'
                 batch.completed_at = timezone.now()
                 batch.save()
@@ -136,12 +142,21 @@ class Command(BaseCommand):
                 schedule.last_run = timezone.now()
                 schedule.save()
                 
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f'Scan completed: {total_scanned} scanned, {total_ingested} ingested, '
-                        f'{total_skipped} skipped, {total_errors} errors'
+                if consolidated_count > 0:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f'Scan completed: {total_scanned} scanned, {total_ingested} ingested, '
+                            f'{total_skipped} skipped, {total_errors} errors. '
+                            f'Consolidated {consolidated_count} duplicate projects, removed {deleted_count} duplicates.'
+                        )
                     )
-                )
+                else:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f'Scan completed: {total_scanned} scanned, {total_ingested} ingested, '
+                            f'{total_skipped} skipped, {total_errors} errors'
+                        )
+                    )
         
         except Exception as e:
             self.stderr.write(self.style.ERROR(f'Error running schedule {schedule.name}: {str(e)}'))

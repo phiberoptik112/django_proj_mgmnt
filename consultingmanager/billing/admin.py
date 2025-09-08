@@ -73,11 +73,23 @@ class BillingDetailAdmin(admin.ModelAdmin):
 
 @admin.register(PIFScanResult)
 class PIFScanResultAdmin(admin.ModelAdmin):
-    list_display = ['project_number', 'project_name', 'status', 'folder_kind', 'scan_batch', 'created_at']
+    list_display = ['project_number', 'project_name', 'status', 'folder_kind', 'project', 'validation_status', 'scan_batch', 'created_at']
     list_filter = ['status', 'folder_kind', 'scan_batch', 'created_at']
     search_fields = ['project_number', 'project_name', 'container_dir', 'pif_file']
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['-created_at']
+    
+    def validation_status(self, obj):
+        """Show project number validation status"""
+        if not obj.project_number or not obj.pif_file:
+            return "No PIF file"
+        
+        if obj.validate_project_number():
+            return "✓ Valid"
+        else:
+            return "✗ Mismatch"
+    
+    validation_status.short_description = "Validation"
     
     fieldsets = (
         ('Scan Information', {

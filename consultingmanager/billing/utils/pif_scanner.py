@@ -58,8 +58,8 @@ class PIFScanner:
     
     def _is_project_directory(self, dir_name: str) -> bool:
         """Check if a directory name looks like a project directory"""
-        # Look for project number patterns like 23-001, P23-001, etc.
-        project_pattern = r'^[P]?\d{2}-\d{3}'
+        # Look for project number patterns like P23-001, 23-001, P24-123, 24-123, etc.
+        project_pattern = r'^P?\d{2}-\d{3}'
         return bool(re.match(project_pattern, dir_name))
     
     def _scan_project_directory(self, project_dir: Path) -> List[Dict[str, Any]]:

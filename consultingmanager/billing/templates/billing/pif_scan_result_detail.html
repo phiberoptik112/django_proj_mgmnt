@@ -1,0 +1,124 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Scan Result {{ result.id }} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Scan Result</h1>
+                <p class="text-muted">{{ result.project_number }} {{ result.project_name }}</p>
+            </div>
+            <div>
+                <a href="{% url 'billing:pif_scan_batch_detail' result.scan_batch.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Batch
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">PIF Preview</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Project Number</dt>
+                        <dd class="col-sm-8">{{ pif_preview.project_number|default:'-' }}</dd>
+                        <dt class="col-sm-4">Project Name</dt>
+                        <dd class="col-sm-8">{{ pif_preview.project_name|default:'-' }}</dd>
+                        <dt class="col-sm-4">Client (parsed)</dt>
+                        <dd class="col-sm-8">{{ pif_preview.client_name|default:'-' }}</dd>
+                        <dt class="col-sm-4">Folder</dt>
+                        <dd class="col-sm-8">{{ pif_preview.container_dir }}</dd>
+                        <dt class="col-sm-4">PIF File</dt>
+                        <dd class="col-sm-8"><small class="text-muted">{{ pif_preview.pif_file|default:'-' }}</small></dd>
+                        <dt class="col-sm-4">Rows</dt>
+                        <dd class="col-sm-8">{{ pif_preview.rows|default:'-' }}</dd>
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{% if pif_preview.status == 'ingested' %}success{% elif pif_preview.status == 'skipped' %}warning{% else %}danger{% endif %}">
+                                {{ result.get_status_display }}
+                            </span>
+                            {% if pif_preview.reason %}<div><small class="text-muted">{{ pif_preview.reason }}</small></div>{% endif %}
+                        </dd>
+                        <dt class="col-sm-4">PM (parsed)</dt>
+                        <dd class="col-sm-8">{{ pif_preview.project_manager|default:'-' }}</dd>
+                        <dt class="col-sm-4">Contract Amount (parsed)</dt>
+                        <dd class="col-sm-8">{{ pif_preview.fee_contract_amount|default:'-' }}</dd>
+                        <dt class="col-sm-4">PO Number (parsed)</dt>
+                        <dd class="col-sm-8">{{ pif_preview.purchase_order_number|default:'-' }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            {% if result.project %}
+            <div class="alert alert-info">
+                Currently linked to project: <a href="{% url 'billing:project_dashboard' result.project.id %}">{{ result.project.title }}</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="card-title mb-0">Save PIF to Project</h5></div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'billing:pif_link_existing_project' result.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Existing Project</label>
+                            {{ link_form.project }}
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="1" id="save_pif" name="save_pif" checked>
+                            <label class="form-check-label" for="save_pif">
+                                Save parsed PIF fields to the selected project (and update budget)
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Link to Project</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">Create New Project from Scan Entry</h5></div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'billing:pif_create_project_from_result' result.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Client</label>
+                            {{ create_form.client }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project Title</label>
+                            {{ create_form.title }}
+                            <div class="form-text">Pre-filled from scan where possible.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            {{ create_form.description }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start Date</label>
+                                {{ create_form.start_date }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Budget</label>
+                                {{ create_form.budget }}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">Create Project</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -30,7 +30,7 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-primary text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -45,7 +45,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -60,13 +60,43 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total_with_project_numbers }}</h4>
+                            <p class="card-text">With Project Numbers</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-hashtag fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total_linked_to_projects }}</h4>
+                            <p class="card-text">Linked to Projects</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-link fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
             <div class="card bg-warning text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="card-title">{{ stats.success_rate|floatformat:1 }}%</h4>
-                            <p class="card-text">Success Rate</p>
+                            <h4 class="card-title">{{ stats.project_number_rate|floatformat:1 }}%</h4>
+                            <p class="card-text">Project Number Rate</p>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-percentage fa-2x"></i>
@@ -75,7 +105,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card bg-danger text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">

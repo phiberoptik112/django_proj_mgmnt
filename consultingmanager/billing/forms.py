@@ -3,6 +3,7 @@ from django.forms import inlineformset_factory
 from .models import ProjectInformationForm, BillingPhase
 from clients.models import Client
 from .models import PIFScanBatch, PIFScanSchedule
+from projects.models import Project
 
 class ProjectInformationFormForm(forms.ModelForm):
     """Form for Project Information Form data entry"""
@@ -179,3 +180,46 @@ class PIFScanCSVImportForm(forms.Form):
             if file.size > 10 * 1024 * 1024:  # 10MB limit
                 raise forms.ValidationError('File size must be less than 10MB.')
         return file
+
+
+class LinkExistingProjectForm(forms.Form):
+    """Form to link a scan result to an existing Project."""
+    project = forms.ModelChoiceField(
+        queryset=Project.objects.all().order_by('-created_at'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True,
+        label='Select existing project'
+    )
+
+
+class CreateProjectFromScanForm(forms.Form):
+    """Form to create a new Project from a scan result."""
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.all().order_by('name'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True,
+        label='Client'
+    )
+    title = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Project title'}),
+        required=True,
+        label='Project title'
+    )
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Optional description'}),
+        required=False,
+        label='Description'
+    )
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True,
+        label='Start date'
+    )
+    budget = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Budget (optional)'
+    )

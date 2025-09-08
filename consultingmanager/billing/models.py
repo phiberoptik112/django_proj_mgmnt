@@ -205,23 +205,194 @@ class PIFScanResult(models.Model):
         return f"{self.project_number} - {self.project_name} ({self.status})"
     
     def extract_project_info_from_path(self):
-        """Extract project number and name from the container directory path"""
+        """Extract project number and name from the container directory path and validate with PIF file"""
         import re
         from pathlib import Path
         
         path = Path(self.container_dir)
-        # Look for project number pattern (e.g., 23-001, P23-001)
-        project_match = re.search(r'([P]?\d{2}-\d{3})', path.name)
+        
+        # Look for project number pattern in the parent directory name (the actual project folder)
+        # This handles paths like /path/to/23-018 Project Name/Business
+        parent_dir = path.parent.name
+        
+        # Look for project number pattern - both PYY-XXX and YY-XXX formats
+        # This matches patterns like P23-001, 23-001, P24-123, 24-123, etc.
+        project_match = re.search(r'(P?\d{2}-\d{3})', parent_dir)
+        
         if project_match:
-            self.project_number = project_match.group(1)
-            # Extract project name (everything after the project number)
-            name_parts = path.name.split(project_match.group(1), 1)
+            extracted_project_number = project_match.group(1)
+            
+            # Validate the project number by checking if it also appears in the PIF file name
+            if self.pif_file:
+                pif_path = Path(self.pif_file)
+                # Look for both formats in PIF file
+                pif_match = re.search(r'(P?\d{2}-\d{3})', pif_path.name)
+                
+                if pif_match and pif_match.group(1) == extracted_project_number:
+                    # Project number matches in both folder and PIF file - use it
+                    self.project_number = extracted_project_number
+                elif pif_match:
+                    # Different project number in PIF file - use the PIF file one (more reliable)
+                    self.project_number = pif_match.group(1)
+                else:
+                    # No project number in PIF file, but found in folder - use folder one
+                    self.project_number = extracted_project_number
+            else:
+                # No PIF file, use the one from folder
+                self.project_number = extracted_project_number
+            
+            # Extract project name (everything after the project number in the parent directory)
+            name_parts = parent_dir.split(extracted_project_number, 1)
             if len(name_parts) > 1:
                 self.project_name = name_parts[1].strip(' -_')
             else:
-                self.project_name = path.name
+                self.project_name = parent_dir
         else:
-            self.project_name = path.name
+            # Try to find project number in PIF file if not found in folder
+            if self.pif_file:
+                pif_path = Path(self.pif_file)
+                pif_match = re.search(r'(P?\d{2}-\d{3})', pif_path.name)
+                if pif_match:
+                    self.project_number = pif_match.group(1)
+                    # Try to extract project name from parent directory
+                    self.project_name = parent_dir
+                else:
+                    self.project_name = parent_dir
+            else:
+                self.project_name = parent_dir
+    
+    def validate_project_number(self):
+        """Validate that the project number is consistent between folder and PIF file"""
+        import re
+        from pathlib import Path
+        
+        if not self.project_number or not self.pif_file:
+            return False
+        
+        # Extract project number from PIF file name (both PYY-XXX and YY-XXX formats)
+        pif_path = Path(self.pif_file)
+        pif_match = re.search(r'(P?\d{2}-\d{3})', pif_path.name)
+        
+        if pif_match:
+            return pif_match.group(1) == self.project_number
+        
+        return False
+    
+    def find_matching_project(self):
+        """Find the matching project in the database based on project number"""
+        if not self.project_number:
+            return None
+        
+        from projects.models import Project
+        
+        # Try to find by title containing the project number
+        try:
+            project = Project.objects.filter(title__icontains=self.project_number).first()
+            return project
+        except:
+            pass
+        
+        return None
+    
+    def link_to_project(self):
+        """Automatically link this scan result to a matching project"""
+        project = self.find_matching_project()
+        if project:
+            self.project = project
+            self.save()
+            return True
+        return False
+    
+    @classmethod
+    def consolidate_duplicates(cls, batch=None):
+        """
+        Consolidate duplicate scan results for the same project number and name.
+        Keeps the result with the most complete information (PIF file, higher file count, etc.)
+        """
+        from django.db import transaction
+        
+        if batch:
+            queryset = cls.objects.filter(scan_batch=batch)
+        else:
+            queryset = cls.objects.all()
+        
+        # Group by project number and name
+        project_groups = {}
+        for result in queryset:
+            if result.project_number and result.project_name:
+                key = (result.project_number, result.project_name)
+                if key not in project_groups:
+                    project_groups[key] = []
+                project_groups[key].append(result)
+        
+        consolidated_count = 0
+        deleted_count = 0
+        
+        with transaction.atomic():
+            for (project_number, project_name), results in project_groups.items():
+                if len(results) > 1:
+                    # Sort by priority: ingested > error > skipped, then by file count, then by rows
+                    def sort_priority(result):
+                        status_priority = {'ingested': 3, 'error': 2, 'skipped': 1}
+                        return (
+                            status_priority.get(result.status, 0),
+                            result.files_count or 0,
+                            result.rows or 0,
+                            len(result.pif_file) if result.pif_file else 0
+                        )
+                    
+                    results.sort(key=sort_priority, reverse=True)
+                    
+                    # Keep the best result
+                    primary_result = results[0]
+                    
+                    # Merge information from other results
+                    for result in results[1:]:
+                        # Merge container directories (keep both)
+                        if result.container_dir and result.container_dir not in primary_result.container_dir:
+                            primary_result.container_dir += f"; {result.container_dir}"
+                        
+                        # Merge folder kinds
+                        if result.folder_kind and result.folder_kind not in primary_result.folder_kind:
+                            if primary_result.folder_kind:
+                                primary_result.folder_kind += f", {result.folder_kind}"
+                            else:
+                                primary_result.folder_kind = result.folder_kind
+                        
+                        # Use the best PIF file (longest path, most complete)
+                        if result.pif_file and (not primary_result.pif_file or len(result.pif_file) > len(primary_result.pif_file)):
+                            primary_result.pif_file = result.pif_file
+                        
+                        # Use the highest file count
+                        if result.files_count and (not primary_result.files_count or result.files_count > primary_result.files_count):
+                            primary_result.files_count = result.files_count
+                        
+                        # Use the highest row count
+                        if result.rows and (not primary_result.rows or result.rows > primary_result.rows):
+                            primary_result.rows = result.rows
+                        
+                        # Use the best status (ingested > error > skipped)
+                        status_priority = {'ingested': 3, 'error': 2, 'skipped': 1}
+                        if status_priority.get(result.status, 0) > status_priority.get(primary_result.status, 0):
+                            primary_result.status = result.status
+                            primary_result.reason = result.reason
+                        
+                        # Merge reasons if different
+                        if result.reason and result.reason != primary_result.reason:
+                            if primary_result.reason and result.reason not in primary_result.reason:
+                                primary_result.reason += f"; {result.reason}"
+                            elif not primary_result.reason:
+                                primary_result.reason = result.reason
+                        
+                        # Delete the duplicate
+                        result.delete()
+                        deleted_count += 1
+                    
+                    # Save the consolidated result
+                    primary_result.save()
+                    consolidated_count += 1
+        
+        return consolidated_count, deleted_count
 
 class PIFScanBatch(models.Model):
     """Represents a batch of PIF scans"""

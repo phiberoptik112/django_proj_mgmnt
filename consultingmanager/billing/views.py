@@ -24,7 +24,10 @@ from .forms import (
     PIFScanBatchForm,
     PIFScanScheduleForm,
     PIFScanCSVImportForm,
+    LinkExistingProjectForm,
+    CreateProjectFromScanForm,
 )
+from .utils.pif_parser import parse_pif_excel
 
 @staff_member_required
 def all_projects_invoicing_summary(request):
@@ -534,6 +537,8 @@ def pif_scanner_dashboard(request):
     total_scanned = PIFScanResult.objects.count()
     total_ingested = PIFScanResult.objects.filter(status='ingested').count()
     total_errors = PIFScanResult.objects.filter(status='error').count()
+    total_with_project_numbers = PIFScanResult.objects.exclude(project_number='').count()
+    total_linked_to_projects = PIFScanResult.objects.exclude(project=None).count()
     
     context = {
         'recent_batches': recent_batches,
@@ -542,7 +547,11 @@ def pif_scanner_dashboard(request):
             'total_scanned': total_scanned,
             'total_ingested': total_ingested,
             'total_errors': total_errors,
-            'success_rate': (total_ingested / total_scanned * 100) if total_scanned > 0 else 0
+            'total_with_project_numbers': total_with_project_numbers,
+            'total_linked_to_projects': total_linked_to_projects,
+            'success_rate': (total_ingested / total_scanned * 100) if total_scanned > 0 else 0,
+            'project_number_rate': (total_with_project_numbers / total_scanned * 100) if total_scanned > 0 else 0,
+            'project_linking_rate': (total_linked_to_projects / total_with_project_numbers * 100) if total_with_project_numbers > 0 else 0
         }
     }
     
@@ -615,17 +624,26 @@ def run_pif_scan_batch(request, batch_id):
                     )
                     scan_result.extract_project_info_from_path()
                     scan_result.save()
+                    
+                    # Try to automatically link to existing project
+                    scan_result.link_to_project()
             
-            # Update batch statistics
-            batch.total_scanned = batch.scan_results.count()
-            batch.total_ingested = batch.scan_results.filter(status='ingested').count()
-            batch.total_skipped = batch.scan_results.filter(status='skipped').count()
-            batch.total_errors = batch.scan_results.filter(status='error').count()
-            batch.status = 'completed'
-            batch.completed_at = timezone.now()
-            batch.save()
-            
-            messages.success(request, f'Scan batch "{batch.name}" completed successfully.')
+                # Consolidate duplicates
+                consolidated_count, deleted_count = PIFScanResult.consolidate_duplicates(batch)
+                
+                # Update batch statistics
+                batch.total_scanned = batch.scan_results.count()
+                batch.total_ingested = batch.scan_results.filter(status='ingested').count()
+                batch.total_skipped = batch.scan_results.filter(status='skipped').count()
+                batch.total_errors = batch.scan_results.filter(status='error').count()
+                batch.status = 'completed'
+                batch.completed_at = timezone.now()
+                batch.save()
+                
+                if consolidated_count > 0:
+                    messages.success(request, f'Scan batch "{batch.name}" completed successfully. Consolidated {consolidated_count} duplicate projects, removed {deleted_count} duplicate entries.')
+                else:
+                    messages.success(request, f'Scan batch "{batch.name}" completed successfully.')
             
         except Exception as e:
             batch.status = 'failed'
@@ -668,6 +686,126 @@ def pif_scan_results(request, batch_id):
     }
     
     return render(request, 'billing/pif_scan_results.html', context)
+
+
+@staff_member_required
+def pif_scan_result_detail(request, result_id):
+    """Detail page for a single PIF scan result with actions to link or create a project."""
+    result = get_object_or_404(PIFScanResult, id=result_id)
+    initial_title = result.project_number + ' ' + result.project_name if result.project_number and result.project_name else (result.project_name or '')
+    link_form = LinkExistingProjectForm()
+    create_form = CreateProjectFromScanForm(initial={'title': initial_title})
+
+    # Parse PIF for preview if available
+    parsed = parse_pif_excel(result.pif_file) if result.pif_file else {}
+    pif_preview = {
+        'pif_file': result.pif_file,
+        'rows': result.rows,
+        'project_number': parsed.get('project_number') or result.project_number,
+        'project_name': parsed.get('project_name') or result.project_name,
+        'container_dir': result.container_dir,
+        'status': result.status,
+        'reason': result.reason,
+        'client_name': parsed.get('client_name'),
+        'project_manager': parsed.get('project_manager'),
+        'fee_contract_amount': parsed.get('fee_contract_amount'),
+        'purchase_order_number': parsed.get('purchase_order_number'),
+    }
+
+    context = {
+        'result': result,
+        'link_form': link_form,
+        'create_form': create_form,
+        'pif_preview': pif_preview,
+        'parsed': parsed,
+    }
+    return render(request, 'billing/pif_scan_result_detail.html', context)
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def pif_link_to_existing_project(request, result_id):
+    """Link a scan result to an existing Project and optionally update the result's project fields."""
+    result = get_object_or_404(PIFScanResult, id=result_id)
+    form = LinkExistingProjectForm(request.POST)
+    if form.is_valid():
+        project = form.cleaned_data['project']
+        result.project = project
+        result.save()
+
+        # Optionally write parsed PIF fields to project's PIF and budget
+        if 'save_pif' in request.POST and result.pif_file:
+            parsed = parse_pif_excel(result.pif_file) or {}
+            if parsed:
+                pif, _ = ProjectInformationForm.objects.get_or_create(project=project)
+                field_names = [f.name for f in ProjectInformationForm._meta.fields if f.name not in ('id', 'project')]
+                for key, val in parsed.items():
+                    if key in field_names:
+                        setattr(pif, key, val)
+                # Ensure number/name present at minimum
+                if not parsed.get('project_number') and result.project_number:
+                    pif.project_number = result.project_number
+                if not parsed.get('project_name') and result.project_name:
+                    pif.project_name = result.project_name
+                pif.save()
+
+                if parsed.get('project_budget') is not None:
+                    project.budget = parsed['project_budget']
+                    project.save()
+        messages.success(request, 'Linked scan result to existing project.')
+        return redirect('billing:pif_scan_result_detail', result_id=result.id)
+    messages.error(request, 'Please select a valid project.')
+    return redirect('billing:pif_scan_result_detail', result_id=result.id)
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def pif_create_project_from_result(request, result_id):
+    """Create a new Project from the scan result and link it, optionally create an empty PIF record."""
+    result = get_object_or_404(PIFScanResult, id=result_id)
+    form = CreateProjectFromScanForm(request.POST)
+    if form.is_valid():
+        client = form.cleaned_data['client']
+        title = form.cleaned_data['title']
+        description = form.cleaned_data.get('description') or ''
+        start_date = form.cleaned_data['start_date']
+        budget = form.cleaned_data.get('budget')
+
+        project = Project.objects.create(
+            client=client,
+            title=title,
+            description=description,
+            start_date=start_date,
+            budget=budget,
+        )
+
+        # Link back to result
+        result.project = project
+        result.save()
+
+        # Create PIF from parsed data if available, otherwise seed basics
+        parsed = parse_pif_excel(result.pif_file) if result.pif_file else {}
+        pif = ProjectInformationForm.objects.create(project=project)
+        pif.project_number = parsed.get('project_number') or (result.project_number or '')
+        pif.project_name = parsed.get('project_name') or (result.project_name or '')
+        pif.client_name = parsed.get('client_name') or (client.company or client.name)
+        # Map remaining parsed fields
+        field_names = [f.name for f in ProjectInformationForm._meta.fields if f.name not in ('id', 'project', 'project_number', 'project_name', 'client_name')]
+        for key, val in parsed.items():
+            if key in field_names:
+                setattr(pif, key, val)
+        pif.save()
+
+        # Optionally update project budget from parsed if not supplied in form
+        if budget is None and parsed.get('project_budget') is not None:
+            project.budget = parsed['project_budget']
+            project.save()
+
+        messages.success(request, 'Created project from scan result and linked it.')
+        return redirect('billing:project_dashboard', project_id=project.id)
+
+    messages.error(request, 'Please correct the errors in the form.')
+    return redirect('billing:pif_scan_result_detail', result_id=result.id)
 
 @staff_member_required
 def pif_scan_schedule_create(request):
@@ -771,8 +909,14 @@ def import_pif_scan_csv(request):
                         )
                         scan_result.extract_project_info_from_path()
                         scan_result.save()
+                        
+                        # Try to automatically link to existing project
+                        scan_result.link_to_project()
                     
                     imported_count += 1
+                
+                # Consolidate duplicates
+                consolidated_count, deleted_count = PIFScanResult.consolidate_duplicates(batch)
                 
                 # Update batch statistics
                 batch.total_scanned = batch.scan_results.count()
@@ -782,7 +926,10 @@ def import_pif_scan_csv(request):
                 batch.completed_at = timezone.now()
                 batch.save()
                 
-                messages.success(request, f'Successfully imported {imported_count} scan results.')
+                if consolidated_count > 0:
+                    messages.success(request, f'Successfully imported {imported_count} scan results. Consolidated {consolidated_count} duplicate projects, removed {deleted_count} duplicate entries.')
+                else:
+                    messages.success(request, f'Successfully imported {imported_count} scan results.')
                 return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
                 
             except Exception as e:

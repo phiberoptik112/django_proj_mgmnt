@@ -9,6 +9,9 @@ The PIF (Project Information Form) Scanner system allows you to scan project dir
 - **Scheduled Scanning**: Set up periodic scans (daily, weekly, monthly)
 - **Database Integration**: Link scan results to projects in the billing system
 - **Search and Filter**: Find PIF files by project number, name, or status
+- **Duplicate Consolidation**: Automatically merge duplicate entries for the same project
+- **Project Number Extraction**: Intelligent extraction of project numbers and names from folder paths
+- **Automatic Project Linking**: Link scan results to existing projects in the system
 
 ## Usage
 
@@ -32,6 +35,8 @@ Navigate to **Billing > PIF Scanner** in the main navigation menu.
 1. From the batch detail page, click **"Run Scan"**
 2. The system will scan each folder for PIF files
 3. Results will be stored in the database
+4. **Duplicate consolidation** will automatically merge entries for the same project
+5. **Project linking** will attempt to connect results to existing projects
 
 ### 4. Import CSV Results
 
@@ -42,6 +47,10 @@ If you have existing scan results in CSV format:
 3. Provide a batch name and description
 4. Choose whether to update existing results
 5. Click **"Import CSV"**
+6. The system will automatically:
+   - Extract project numbers and names from folder paths
+   - Consolidate duplicate entries for the same project
+   - Link results to existing projects when possible
 
 ### 5. Set Up Scheduled Scans
 
@@ -52,6 +61,14 @@ If you have existing scan results in CSV format:
    - **Year Folders**: Paths to scan
    - **Active**: Enable/disable the schedule
 3. Click **"Create Schedule"**
+
+### 6. Manage Duplicate Entries
+
+The system automatically consolidates duplicate entries, but you can also manage them manually:
+
+1. **View Duplicates**: Check the dashboard for consolidation statistics
+2. **Manual Consolidation**: Use management commands to consolidate duplicates
+3. **Dry Run**: Test consolidation without making changes using `--dry-run`
 
 ## CSV Format
 
@@ -94,6 +111,36 @@ python manage.py run_pif_scans --schedule-id 1
 python manage.py run_pif_scans --force
 ```
 
+### Consolidate Duplicate Entries
+
+```bash
+python manage.py consolidate_pif_duplicates
+```
+
+### Consolidate Duplicates (Dry Run)
+
+```bash
+python manage.py consolidate_pif_duplicates --dry-run
+```
+
+### Consolidate Specific Batch
+
+```bash
+python manage.py consolidate_pif_duplicates --batch-id 1
+```
+
+### Update Project Numbers
+
+```bash
+python manage.py update_pif_project_numbers
+```
+
+### Update Project Numbers (Dry Run)
+
+```bash
+python manage.py update_pif_project_numbers --dry-run
+```
+
 ## Integration with Billing System
 
 The PIF scanner integrates with the billing system in several ways:
@@ -102,6 +149,8 @@ The PIF scanner integrates with the billing system in several ways:
 2. **PIF Data**: Extracted project information can be used to populate PIF forms
 3. **Accounting Summary**: Project names from scan results appear in the accounting summary page
 4. **Search**: Use the project search API to find PIF files by project
+5. **Duplicate Consolidation**: Automatically merges duplicate entries for the same project
+6. **Project Number Extraction**: Intelligently extracts project numbers and names from folder paths
 
 ## File Structure
 
@@ -114,12 +163,24 @@ The scanner expects project directories to follow this structure:
 │   │   ├── Business/
 │   │   │   └── PIFX 23-001.xlsx
 │   │   └── Documents/
-│   └── 23-002 Another Project/
+│   ├── P23-002 Another Project/
+│   │   ├── Business/
+│   │   │   └── PIF P23-002.xlsx
+│   │   └── Documents/
+│   └── 23-003 Third Project/
 │       ├── Business/
 │       └── Documents/
 └── 2024/
     └── ...
 ```
+
+### Project Number Formats
+
+The system recognizes these project number formats:
+- `YY-XXX` (e.g., `23-001`, `24-123`)
+- `PYY-XXX` (e.g., `P23-001`, `P24-123`)
+
+Project numbers are extracted from the **parent directory name** (the project folder), not the subdirectory name (Business/Documents).
 
 ## PIF File Patterns
 
@@ -136,7 +197,11 @@ The scanner looks for files matching these patterns:
 Represents a batch of PIF scans with configuration and results.
 
 ### PIFScanResult
-Individual scan results for each directory scanned.
+Individual scan results for each directory scanned. Includes:
+- **Project Number**: Extracted from folder path (e.g., `23-001`, `P23-001`)
+- **Project Name**: Extracted from folder path after project number
+- **Project Link**: Optional link to existing project in the system
+- **Validation Status**: Consistency check between folder and PIF file names
 
 ### PIFScanSchedule
 Scheduled scans for periodic execution.
@@ -155,10 +220,26 @@ Returns PIF scan results matching the search query.
 1. **Permission Errors**: Ensure the application has read access to the project directories
 2. **File Format Errors**: Some Excel files may not be readable due to format issues
 3. **Path Issues**: Verify that the year folder paths are correct and accessible
+4. **Duplicate Entries**: Use the consolidation command to merge duplicate project entries
+5. **Missing Project Numbers**: Run the update command to re-extract project numbers from existing data
 
 ### Logs
 
 Check the Django logs for detailed error information when scans fail.
+
+### Duplicate Consolidation
+
+If you notice duplicate entries for the same project:
+
+1. **Check for duplicates**: Use `--dry-run` to see what would be consolidated
+2. **Consolidate all**: Run `python manage.py consolidate_pif_duplicates`
+3. **Consolidate specific batch**: Use `--batch-id` to target a specific batch
+
+The consolidation process:
+- Groups entries by project number and name
+- Keeps the entry with the best status (ingested > error > skipped)
+- Merges information from duplicate entries
+- Preserves the most complete data
 
 ## Future Enhancements
 
@@ -167,3 +248,6 @@ Check the Django logs for detailed error information when scans fail.
 - Advanced filtering and reporting
 - Integration with external file systems
 - Automated PIF data extraction from Excel files
+- Enhanced project number validation
+- Bulk project linking tools
+- Advanced duplicate detection algorithms

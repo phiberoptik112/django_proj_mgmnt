@@ -76,7 +76,7 @@
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
-                                    <tr>
+                                    <tr {% if result.pk %}onclick="window.location='{% url 'billing:pif_scan_result_detail' result.pk %}';" style="cursor:pointer;"{% endif %}>
                                         <th>Project</th>
                                         <th>Folder</th>
                                         <th>Status</th>
@@ -92,7 +92,7 @@
                                     <tr>
                                         <td>
                                             {% if result.project_number %}
-                                                <strong>{{ result.project_number }}</strong><br>
+                                                <a href="{% url 'billing:pif_scan_result_detail' result.pk %}"><strong>{{ result.project_number }}</strong></a><br>
                                                 <small class="text-muted">{{ result.project_name }}</small>
                                             {% else %}
                                                 <span class="text-muted">No project number</span>
