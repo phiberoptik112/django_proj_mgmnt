@@ -33,6 +33,14 @@
                         <dd class="col-sm-8">{{ pif_preview.project_name|default:'-' }}</dd>
                         <dt class="col-sm-4">Client (parsed)</dt>
                         <dd class="col-sm-8">{{ pif_preview.client_name|default:'-' }}</dd>
+                        <dt class="col-sm-4">Billing Contact</dt>
+                        <dd class="col-sm-8">{{ pif_preview.billing_contact|default:'-' }}</dd>
+                        <dt class="col-sm-4">Billing Email</dt>
+                        <dd class="col-sm-8">{{ pif_preview.billing_contact_email|default:'-' }}</dd>
+                        <dt class="col-sm-4">Office</dt>
+                        <dd class="col-sm-8">{{ pif_preview.dlaa_office|default:'-' }}</dd>
+                        <dt class="col-sm-4">Location</dt>
+                        <dd class="col-sm-8">{{ pif_preview.project_location_city|default:'-' }} {% if pif_preview.project_location_state %}({{ pif_preview.project_location_state }}){% endif %}</dd>
                         <dt class="col-sm-4">Folder</dt>
                         <dd class="col-sm-8">{{ pif_preview.container_dir }}</dd>
                         <dt class="col-sm-4">PIF File</dt>
@@ -52,9 +60,162 @@
                         <dd class="col-sm-8">{{ pif_preview.fee_contract_amount|default:'-' }}</dd>
                         <dt class="col-sm-4">PO Number (parsed)</dt>
                         <dd class="col-sm-8">{{ pif_preview.purchase_order_number|default:'-' }}</dd>
+                        <dt class="col-sm-4">Start Date</dt>
+                        <dd class="col-sm-8">{{ pif_preview.project_start_date|default:'-' }}</dd>
+                        <dt class="col-sm-4">Expenses</dt>
+                        <dd class="col-sm-8">{{ pif_preview.expenses|default:'-' }}</dd>
+                        <dt class="col-sm-4">Contract Type</dt>
+                        <dd class="col-sm-8">{{ pif_preview.type_of_contract|default:'-' }}</dd>
+                        <dt class="col-sm-4">Tax Locations</dt>
+                        <dd class="col-sm-8">{% if pif_preview.tax_locations %}{{ pif_preview.tax_locations|join:', ' }}{% else %}-{% endif %}</dd>
+                        <dt class="col-sm-4">Retainer Received</dt>
+                        <dd class="col-sm-8">{{ pif_preview.retainer_received|default:'-' }}</dd>
                     </dl>
                 </div>
             </div>
+
+            <!-- Raw pairs fallback when parser cannot map fields -->
+            {% if parsed.raw_pairs %}
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="card-title mb-0">Detected Fields (Raw)</h5></div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th style="width:40%">Label</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for label, value in parsed.raw_pairs %}
+                                <tr>
+                                    <td><small class="text-muted">{{ label }}</small></td>
+                                    <td>{{ value }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if result.pif_file %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">PIF File Preview (All Sheets)</h5>
+                    {% if parsed.total_sheets %}
+                    <small class="text-muted">{{ parsed.sheets_with_data }} of {{ parsed.total_sheets }} sheets contain data</small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if parsed.csv_previews %}
+                        {% if parsed.csv_previews|length > 1 %}
+                        <!-- Tab Navigation for Multiple Sheets -->
+                        <ul class="nav nav-tabs mb-3" id="sheetTabs" role="tablist">
+                            {% for preview in parsed.csv_previews %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                                        id="sheet-{{ forloop.counter0 }}-tab" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#sheet-{{ forloop.counter0 }}" 
+                                        type="button" 
+                                        role="tab" 
+                                        aria-controls="sheet-{{ forloop.counter0 }}" 
+                                        aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                    {{ preview.sheet_name }}
+                                    <span class="badge bg-secondary ms-1">{{ preview.row_count }} rows</span>
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="sheetTabContent">
+                            {% for preview in parsed.csv_previews %}
+                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
+                                 id="sheet-{{ forloop.counter0 }}" 
+                                 role="tabpanel" 
+                                 aria-labelledby="sheet-{{ forloop.counter0 }}-tab">
+                                
+                                {% if preview.error %}
+                                <div class="alert alert-warning">
+                                    <strong>Preview Error:</strong> {{ preview.error }}
+                                </div>
+                                {% else %}
+                                <div class="table-responsive" style="max-height: 400px; overflow:auto;">
+                                    <table class="table table-striped table-bordered table-sm">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                {% for h in preview.headers %}
+                                                <th>{{ h }}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in preview.rows %}
+                                            <tr>
+                                                {% for cell in row %}
+                                                <td>{{ cell }}</td>
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>Sheet:</strong> {{ preview.sheet_name }} | 
+                                        <strong>Showing:</strong> {{ preview.row_count }} rows | 
+                                        <strong>Total in sheet:</strong> {{ preview.total_rows_in_sheet }} rows, {{ preview.total_cols_in_sheet }} columns |
+                                        <strong>Non-empty columns:</strong> {{ preview.non_empty_cols }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <strong>CSV preview unavailable.</strong>
+                            <br>This could be due to:
+                            <ul class="mb-0 mt-2">
+                                <li>File format issues</li>
+                                <li>Empty or corrupted Excel file</li>
+                                <li>Permission issues accessing the file</li>
+                                <li>File path: <code>{{ result.pif_file }}</code></li>
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if linked %}
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="card-title mb-0">Linked Project Summary</h5></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Project</dt>
+                        <dd class="col-sm-8">{{ linked.project_title }}</dd>
+                        <dt class="col-sm-4">Client</dt>
+                        <dd class="col-sm-8">{{ linked.client_company }} ({{ linked.client_name }})</dd>
+                        <dt class="col-sm-4">Budget</dt>
+                        <dd class="col-sm-8">{{ linked.budget|default:'-' }}</dd>
+                        <dt class="col-sm-4">PIF Contract</dt>
+                        <dd class="col-sm-8">{{ linked.pif_fee_contract_amount|default:'-' }}</dd>
+                        <dt class="col-sm-4">Phases</dt>
+                        <dd class="col-sm-8">{{ linked.phases_count }} (Amount Total: {{ linked.phases_amount_total }})</dd>
+                        <dt class="col-sm-4">Subconsultant 1</dt>
+                        <dd class="col-sm-8">{{ linked.sub1_total }}</dd>
+                        <dt class="col-sm-4">Subconsultant 2</dt>
+                        <dd class="col-sm-8">{{ linked.sub2_total }}</dd>
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
 
             {% if result.project %}
             <div class="alert alert-info">

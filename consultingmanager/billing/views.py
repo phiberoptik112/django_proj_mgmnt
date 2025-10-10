@@ -591,11 +591,95 @@ def pif_scan_batch_detail(request, batch_id):
     return render(request, 'billing/pif_scan_batch_detail.html', context)
 
 @staff_member_required
+@require_http_methods(["POST"]) 
+def pif_scan_batch_delete(request, batch_id):
+    """Delete a PIF scan batch and its results."""
+    batch = get_object_or_404(PIFScanBatch, id=batch_id)
+    name = batch.name
+    # Cascade delete will remove related PIFScanResult due to FK on_delete=CASCADE
+    batch.delete()
+    messages.success(request, f'Scan batch "{name}" deleted.')
+    return redirect('billing:pif_scanner_dashboard')
+
+@staff_member_required
+@require_http_methods(["POST"]) 
+def pif_scan_batch_rerun(request, batch_id):
+    """Re-run a PIF scan for an existing batch configuration.
+    Resets stats and runs the same folders again.
+    """
+    batch = get_object_or_404(PIFScanBatch, id=batch_id)
+
+    # Guard: ensure batch has configured folders; CSV-imported batches won't
+    if not batch.year_folders:
+        messages.error(request, 'Cannot re-run this batch: no year folders are configured (likely an imported batch). Create a new batch with folders to scan.')
+        return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
+
+    # Reset statistics and previous results for a clean run
+    batch.total_scanned = 0
+    batch.total_ingested = 0
+    batch.total_skipped = 0
+    batch.total_errors = 0
+    batch.error_summary = ''
+    batch.status = 'running'
+    batch.started_at = timezone.now()
+    batch.completed_at = None
+    batch.save()
+
+    # Delete prior results to avoid duplicates across runs
+    batch.scan_results.all().delete()
+
+    try:
+        from .utils.pif_scanner import PIFScanner
+        scanner = PIFScanner()
+
+        for folder_path in batch.year_folders:
+            results = scanner.scan_year_folder(folder_path)
+            for result_data in results:
+                scan_result = PIFScanResult.objects.create(
+                    scan_batch=batch,
+                    container_dir=result_data.get('container_dir', ''),
+                    folder_kind=result_data.get('folder_kind', ''),
+                    pif_file=result_data.get('pif_file', ''),
+                    files_count=result_data.get('files_count'),
+                    rows=result_data.get('rows'),
+                    status=result_data.get('status', 'skipped'),
+                    reason=result_data.get('reason', ''),
+                )
+                scan_result.extract_project_info_from_path()
+                scan_result.save()
+                scan_result.link_to_project()
+
+        consolidated_count, deleted_count = PIFScanResult.consolidate_duplicates(batch)
+
+        batch.total_scanned = batch.scan_results.count()
+        batch.total_ingested = batch.scan_results.filter(status='ingested').count()
+        batch.total_skipped = batch.scan_results.filter(status='skipped').count()
+        batch.total_errors = batch.scan_results.filter(status='error').count()
+        batch.status = 'completed'
+        batch.completed_at = timezone.now()
+        batch.save()
+
+        if consolidated_count > 0:
+            messages.success(request, f'Re-ran "{batch.name}" successfully. Consolidated {consolidated_count} duplicate projects, removed {deleted_count} entries.')
+        else:
+            messages.success(request, f'Re-ran "{batch.name}" successfully.')
+    except Exception as e:
+        batch.status = 'failed'
+        batch.error_summary = str(e)
+        batch.save()
+        messages.error(request, f'Re-run failed: {str(e)}')
+
+    return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
+
+@staff_member_required
 def run_pif_scan_batch(request, batch_id):
     """Run a PIF scan batch"""
     batch = get_object_or_404(PIFScanBatch, id=batch_id)
     
     if request.method == 'POST':
+        if not batch.year_folders:
+            messages.error(request, 'This batch has no year folders configured; nothing to scan.')
+            return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
         # Start the scan process
         batch.status = 'running'
         batch.started_at = timezone.now()
@@ -710,7 +794,45 @@ def pif_scan_result_detail(request, result_id):
         'project_manager': parsed.get('project_manager'),
         'fee_contract_amount': parsed.get('fee_contract_amount'),
         'purchase_order_number': parsed.get('purchase_order_number'),
+        'billing_contact': parsed.get('billing_contact'),
+        'billing_contact_email': parsed.get('billing_contact_email'),
+        'dlaa_office': parsed.get('dlaa_office'),
+        'project_location_city': parsed.get('project_location_city'),
+        'project_location_state': parsed.get('project_location_state'),
+        'project_start_date': parsed.get('project_start_date'),
+        'expenses': parsed.get('expenses'),
+        'type_of_contract': parsed.get('type_of_contract'),
+        'tax_locations': parsed.get('tax_locations'),
+        'retainer_received': parsed.get('retainer_received'),
     }
+
+    # If linked to a project, prepare client/budget/phase summaries
+    linked = None
+    if result.project:
+        project = result.project
+        linked_pif = getattr(project, 'pif', None)
+        phases_count = 0
+        amount_total = 0
+        sub1_total = 0
+        sub2_total = 0
+        fee_contract_amount = None
+        if linked_pif:
+            phases_count = linked_pif.billing_phases.count()
+            fee_contract_amount = linked_pif.fee_contract_amount
+            amount_total = linked_pif.billing_phases.aggregate(total=Sum('amount'))['total'] or 0
+            sub1_total = linked_pif.billing_phases.aggregate(total=Sum('subconsultant_fee_1'))['total'] or 0
+            sub2_total = linked_pif.billing_phases.aggregate(total=Sum('subconsultant_fee_2'))['total'] or 0
+        linked = {
+            'project_title': project.title,
+            'client_name': project.client.name,
+            'client_company': project.client.company,
+            'budget': project.budget,
+            'pif_fee_contract_amount': fee_contract_amount,
+            'phases_count': phases_count,
+            'phases_amount_total': amount_total,
+            'sub1_total': sub1_total,
+            'sub2_total': sub2_total,
+        }
 
     context = {
         'result': result,
@@ -718,6 +840,7 @@ def pif_scan_result_detail(request, result_id):
         'create_form': create_form,
         'pif_preview': pif_preview,
         'parsed': parsed,
+        'linked': linked,
     }
     return render(request, 'billing/pif_scan_result_detail.html', context)
 

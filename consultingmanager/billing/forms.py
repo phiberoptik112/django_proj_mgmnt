@@ -105,18 +105,40 @@ class PIFScanBatchForm(forms.ModelForm):
             'year_folders': forms.Textarea(attrs={
                 'class': 'form-control', 
                 'rows': 5, 
-                'placeholder': 'Enter one folder path per line:\n/Volumes/KAILUA PROJECTS/2023\n/Volumes/KAILUA PROJECTS/2024'
+                'placeholder': '["/Volumes/KAILUA PROJECTS/2023", "/Volumes/KAILUA PROJECTS/2024"]'
             }),
         }
     
     def clean_year_folders(self):
-        """Convert textarea input to JSON list"""
+        """Validate and parse JSON input for year folders"""
         folders_text = self.cleaned_data.get('year_folders')
         if folders_text:
-            # Split by lines and clean up
-            folders = [folder.strip() for folder in folders_text.split('\n') if folder.strip()]
-            return folders
-        return []
+            # If it's already a list (from form processing), return it
+            if isinstance(folders_text, list):
+                return folders_text
+            
+            # If it's a string, try to parse as JSON
+            if isinstance(folders_text, str):
+                try:
+                    import json
+                    folders = json.loads(folders_text)
+                    if not isinstance(folders, list):
+                        raise forms.ValidationError("JSON must be an array/list format.")
+                    # Validate that all items are strings
+                    for i, folder in enumerate(folders):
+                        if not isinstance(folder, str):
+                            raise forms.ValidationError("All folder paths must be strings.")
+                        folders[i] = folder.strip()
+                    return folders
+                except json.JSONDecodeError:
+                    # Fallback: try line-by-line parsing for backward compatibility
+                    folders = [folder.strip() for folder in folders_text.split('\n') if folder.strip()]
+                    if folders:
+                        return folders
+                    else:
+                        raise forms.ValidationError("Enter a valid JSON array or folder paths.")
+        # Require at least one folder
+        raise forms.ValidationError("Please provide at least one year folder to scan.")
 
 class PIFScanScheduleForm(forms.ModelForm):
     """Form for creating PIF scan schedules"""
@@ -131,18 +153,38 @@ class PIFScanScheduleForm(forms.ModelForm):
             'year_folders': forms.Textarea(attrs={
                 'class': 'form-control', 
                 'rows': 5, 
-                'placeholder': 'Enter one folder path per line:\n/Volumes/KAILUA PROJECTS/2023\n/Volumes/KAILUA PROJECTS/2024'
+                'placeholder': '["/Volumes/KAILUA PROJECTS/2023", "/Volumes/KAILUA PROJECTS/2024"]'
             }),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def clean_year_folders(self):
-        """Convert textarea input to JSON list"""
+        """Validate and parse JSON input for year folders"""
         folders_text = self.cleaned_data.get('year_folders')
         if folders_text:
-            # Split by lines and clean up
-            folders = [folder.strip() for folder in folders_text.split('\n') if folder.strip()]
-            return folders
+            # If it's already a list (from form processing), return it
+            if isinstance(folders_text, list):
+                return folders_text
+            
+            # If it's a string, try to parse as JSON
+            if isinstance(folders_text, str):
+                try:
+                    import json
+                    folders = json.loads(folders_text)
+                    if not isinstance(folders, list):
+                        raise forms.ValidationError("JSON must be an array/list format.")
+                    # Validate that all items are strings
+                    for folder in folders:
+                        if not isinstance(folder, str):
+                            raise forms.ValidationError("All folder paths must be strings.")
+                    return folders
+                except json.JSONDecodeError:
+                    # Fallback: try line-by-line parsing for backward compatibility
+                    folders = [folder.strip() for folder in folders_text.split('\n') if folder.strip()]
+                    if folders:
+                        return folders
+                    else:
+                        raise forms.ValidationError("Enter a valid JSON array or folder paths.")
         return []
 
 class PIFScanCSVImportForm(forms.Form):

@@ -17,11 +17,15 @@ class PIFScanner:
     
     def __init__(self):
         self.pif_patterns = [
-            r'PIF.*\.xlsx',
-            r'PIFX.*\.xlsx',
-            r'Project.*Information.*Form.*\.xlsx',
-            r'PIF.*\.xls',
-            r'PIFX.*\.xls',
+            'PIF*.xlsx',
+            'PIFX*.xlsx',
+            'Project*Information*Form*.xlsx',
+            'PIF*.xls',
+            'PIFX*.xls',
+            'PIFX *.xlsx',  # Match PIFX with space before project number
+            'PIFX *.xls',   # Match PIFX with space before project number
+            'PIF_*.xlsx',
+            'PIF_*.xls',
         ]
     
     def scan_year_folder(self, year_folder_path: str) -> List[Dict[str, Any]]:
@@ -35,10 +39,16 @@ class PIFScanner:
             List of scan results
         """
         results = []
-        year_path = Path(year_folder_path)
+        # Normalize incoming path: strip whitespace and expand ~
+        try:
+            normalized_input = (year_folder_path or '').strip()
+        except Exception:
+            normalized_input = str(year_folder_path)
+        year_path = Path(normalized_input).expanduser()
+        logger.info(f"Scanning year folder: [{normalized_input}] -> resolved=[{year_path}] exists={year_path.exists()} is_dir={year_path.is_dir()}")
         
-        if not year_path.exists():
-            logger.error(f"Year folder does not exist: {year_folder_path}")
+        if not year_path.exists() or not year_path.is_dir():
+            logger.error(f"Year folder does not exist or is not a directory: {normalized_input}")
             return results
         
         # Scan each project directory in the year folder

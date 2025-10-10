@@ -163,17 +163,34 @@
                                         <td>{{ batch.created_at|date:"M d, Y H:i" }}</td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="{% url 'billing:pif_scan_batch_detail' batch.id %}" class="btn btn-outline-primary">
+                                                <a href="{% url 'billing:pif_scan_batch_detail' batch.id %}" class="btn btn-outline-primary" title="View">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 {% if batch.status == 'pending' %}
                                                 <form method="post" action="{% url 'billing:run_pif_scan_batch' batch.id %}" class="d-inline">
                                                     {% csrf_token %}
-                                                    <button type="submit" class="btn btn-outline-success">
+                                                    <button type="submit" class="btn btn-outline-success" title="Run">
                                                         <i class="fas fa-play"></i>
                                                     </button>
                                                 </form>
+                                                {% elif batch.year_folders %}
+                                                <form method="post" action="{% url 'billing:pif_scan_batch_rerun' batch.id %}" class="d-inline" onsubmit="return confirm('Re-run this scan? This will clear previous results for the batch.');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-warning" title="Re-run">
+                                                        <i class="fas fa-rotate-right"></i>
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <button type="button" class="btn btn-outline-warning" title="Re-run unavailable" disabled>
+                                                    <i class="fas fa-rotate-right"></i>
+                                                </button>
                                                 {% endif %}
+                                                <form method="post" action="{% url 'billing:pif_scan_batch_delete' batch.id %}" class="d-inline" onsubmit="return confirm('Delete this scan batch and all its results?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>

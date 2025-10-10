@@ -55,7 +55,7 @@
                             <label for="{{ form.year_folders.id_for_label }}" class="form-label">Year Folders to Scan</label>
                             <textarea class="form-control {% if form.year_folders.errors %}is-invalid{% endif %}" 
                                       id="{{ form.year_folders.id_for_label }}" name="{{ form.year_folders.name }}" 
-                                      rows="5">{{ form.year_folders.value|default:'' }}</textarea>
+                                      rows="5" placeholder='["/Volumes/KAILUA PROJECTS/2023", "/Volumes/KAILUA PROJECTS/2024"]'>{{ form.year_folders.value|default:'' }}</textarea>
                             {% if form.year_folders.errors %}
                             <div class="invalid-feedback">
                                 {% for error in form.year_folders.errors %}
@@ -63,7 +63,11 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            <div class="form-text">Enter one folder path per line. Example: /Volumes/KAILUA PROJECTS/2023</div>
+                            <div class="form-text">
+                                <strong>JSON Format Required:</strong> Enter folder paths as a JSON array. 
+                                <br><strong>Example:</strong> <code>["/Volumes/KAILUA PROJECTS/2023", "/Volumes/KAILUA PROJECTS/2024"]</code>
+                                <br><strong>Single folder:</strong> <code>["/Volumes/KAILUA PROJECTS/2023"]</code>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between">

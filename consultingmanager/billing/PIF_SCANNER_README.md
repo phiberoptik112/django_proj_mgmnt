@@ -227,6 +227,32 @@ Returns PIF scan results matching the search query.
 
 Check the Django logs for detailed error information when scans fail.
 
+### Testing the PIF Parser
+
+To test the PIF parser with a specific Excel file:
+
+```bash
+python manage.py test_pif_parser /path/to/pif/file.xlsx --verbose
+```
+
+This command will:
+- Parse the Excel file using the PIF parser
+- Show extracted fields and their values
+- Display CSV preview information
+- Show raw field pairs found in the file
+- Provide detailed logging output
+
+### CSV Preview Improvements
+
+The PIF scan result detail page now includes:
+- **Multi-Sheet Support**: Displays all sheets in the Excel file with tabbed navigation
+- **Raw Excel Data Display**: Shows the actual content of Excel files in a table format
+- **Better Error Handling**: Displays specific error messages when files can't be read
+- **Debug Information**: Shows file paths, sheet names, row counts, and column information
+- **Robust Parsing**: Handles various Excel file formats and structures
+- **Comprehensive Field Extraction**: Searches all sheets for field name/value pairs, not just the first sheet
+- **Sheet Statistics**: Shows how many sheets contain data vs. total sheets in the file
+
 ### Duplicate Consolidation
 
 If you notice duplicate entries for the same project:
