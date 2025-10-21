@@ -1,0 +1,97 @@
+---
+description: PIF Scanner - Create New Client & Project Feature
+---
+
+# PIF Scanner: Create Client & Project from Scan Entry
+
+## Overview
+
+The PIF Scanner now supports creating both a new Client and a new Project simultaneously from a PIF scan result. This feature streamlines the workflow when processing PIF files from new clients.
+
+## Feature Components
+
+### 1. Forms
+**File**: [consultingmanager/billing/forms.py](mdc:consultingmanager/billing/forms.py)
+
+- **`CreateClientAndProjectFromScanForm`**: New form that combines client and project creation fields
+  - Client section: name, company, email, phone, address, billing contact (optional)
+  - Project section: title, description, start_date, budget (optional)
+
+### 2. Views
+**File**: [consultingmanager/billing/views.py](mdc:consultingmanager/billing/views.py)
+
+- **`pif_create_client_and_project_from_result()`**: New POST view that:
+  1. Creates a new Client from form data
+  2. Creates a new Project and links it to the new Client
+  3. Links the PIF scan result to the new Project
+  4. Generates a ProjectInformationForm (PIF) with parsed data from the Excel file
+  5. Updates project budget from PIF if not supplied in form
+  6. Redirects to the project dashboard
+
+- **`pif_scan_result_detail()`**: Updated to pass `create_client_and_project_form` to the template
+
+### 3. URLs
+**File**: [consultingmanager/billing/urls.py](mdc:consultingmanager/billing/urls.py)
+
+- **Route**: `pif-scanner/result/<int:result_id>/create-client-project/`
+- **Name**: `pif_create_client_and_project_from_result`
+
+### 4. Template
+**File**: [consultingmanager/billing/templates/billing/pif_scan_result_detail.html](mdc:consultingmanager/billing/templates/billing/pif_scan_result_detail.html)
+
+- New card section "Create New Client & Project" with:
+  - Organized form sections (Client Information / Project Information)
+  - Error handling and validation display
+  - Form fields pre-populated with scan data where available
+
+## Usage Workflow
+
+1. Navigate to a PIF scan result detail page
+2. Scroll to the "Create New Client & Project" card
+3. Fill in client information (required fields):
+   - Contact Name, Company, Email, Phone, Address
+   - Optional: Billing Contact & Billing Email
+4. Fill in project information (required fields):
+   - Project Title (pre-filled from scan)
+   - Start Date
+   - Optional: Description, Budget
+5. Click "Create Client & Project" button
+6. System creates:
+   - New Client record with provided information
+   - New Project linked to the new Client
+   - ProjectInformationForm (PIF) with auto-populated data from Excel
+7. Redirects to project dashboard
+
+## Data Flow
+
+```
+PIF Excel File
+    ↓
+Parsed by parse_pif_excel()
+    ↓
+PIF Scan Result Detail Page
+    ↓
+User fills CreateClientAndProjectFromScanForm
+    ↓
+POST to pif_create_client_and_project_from_result
+    ↓
+├─ Create Client
+├─ Create Project (linked to Client)
+├─ Link ScanResult to Project
+├─ Create PIF with parsed data
+└─ Redirect to Project Dashboard
+```
+
+## Integration Points
+
+- **Client Model**: [consultingmanager/clients/models.py](mdc:consultingmanager/clients/models.py)
+- **Project Model**: [consultingmanager/projects/models.py](mdc:consultingmanager/projects/models.py)
+- **ProjectInformationForm Model**: [consultingmanager/billing/models.py](mdc:consultingmanager/billing/models.py)
+- **PIF Parser**: [consultingmanager/billing/utils/pif_parser.py](mdc:consultingmanager/billing/utils/pif_parser.py)
+
+## Related Features
+
+- Existing "Create New Project" feature (uses existing Client)
+- Existing "Link to Existing Project" feature
+- PIF auto-mapping from Excel files
+- Field mapping customization interface

@@ -265,3 +265,73 @@ class CreateProjectFromScanForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         label='Budget (optional)'
     )
+
+
+class CreateClientAndProjectFromScanForm(forms.Form):
+    """Form to create both a new Client and a new Project from a scan result."""
+    
+    # Client fields
+    client_name = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact person name'}),
+        required=True,
+        label='Client Contact Name'
+    )
+    client_company = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Company name'}),
+        required=True,
+        label='Company Name'
+    )
+    client_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@company.com'}),
+        required=True,
+        label='Email'
+    )
+    client_phone = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(555) 123-4567'}),
+        required=True,
+        label='Phone'
+    )
+    client_address = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Street Address\nCity, State ZIP'}),
+        required=True,
+        label='Address'
+    )
+    client_billing_contact = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Billing contact person (if different)'}),
+        required=False,
+        label='Billing Contact (optional)'
+    )
+    client_billing_contact_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'billing@company.com'}),
+        required=False,
+        label='Billing Email (optional)'
+    )
+    
+    # Project fields
+    project_title = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Project title'}),
+        required=True,
+        label='Project Title'
+    )
+    project_description = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Optional description'}),
+        required=False,
+        label='Description'
+    )
+    project_start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        required=True,
+        label='Start Date'
+    )
+    project_budget = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Budget (optional)'
+    )

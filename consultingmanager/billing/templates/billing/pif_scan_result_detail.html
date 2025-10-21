@@ -74,10 +74,84 @@
                 </div>
             </div>
 
+            <!-- Field Mapping Interface -->
+            {% if parsed.field_mappings %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Auto-Mapped Fields</h5>
+                    <small class="text-muted">Fields automatically identified from the PIF scan (from second sheet)</small>
+                </div>
+                <div class="card-body">
+                    <form id="fieldMappingForm" method="post" action="{% url 'billing:pif_update_field_mapping' result.id %}">
+                        {% csrf_token %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width:25%">Detected Label</th>
+                                        <th style="width:30%">Value</th>
+                                        <th style="width:25%">Mapped To</th>
+                                        <th style="width:10%">Confidence</th>
+                                        <th style="width:10%">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mapping in parsed.field_mappings %}
+                                    <tr>
+                                        <td><small class="text-muted">{{ mapping.label }}</small></td>
+                                        <td>{{ mapping.value }}</td>
+                                        <td>
+                                            <select class="form-select form-select-sm" name="field_{{ forloop.counter0 }}_mapping">
+                                                <option value="">-- Unmapped --</option>
+                                                <option value="project_number" {% if mapping.field_name == 'project_number' %}selected{% endif %}>Project Number</option>
+                                                <option value="project_name" {% if mapping.field_name == 'project_name' %}selected{% endif %}>Project Name</option>
+                                                <option value="client_name" {% if mapping.field_name == 'client_name' %}selected{% endif %}>Client Name</option>
+                                                <option value="billing_contact" {% if mapping.field_name == 'billing_contact' %}selected{% endif %}>Billing Contact</option>
+                                                <option value="billing_contact_email" {% if mapping.field_name == 'billing_contact_email' %}selected{% endif %}>Billing Email</option>
+                                                <option value="project_manager" {% if mapping.field_name == 'project_manager' %}selected{% endif %}>Project Manager</option>
+                                                <option value="fee_contract_amount" {% if mapping.field_name == 'fee_contract_amount' %}selected{% endif %}>Contract Amount</option>
+                                                <option value="purchase_order_number" {% if mapping.field_name == 'purchase_order_number' %}selected{% endif %}>PO Number</option>
+                                                <option value="dlaa_office" {% if mapping.field_name == 'dlaa_office' %}selected{% endif %}>Office</option>
+                                                <option value="project_location_city" {% if mapping.field_name == 'project_location_city' %}selected{% endif %}>City</option>
+                                                <option value="project_location_state" {% if mapping.field_name == 'project_location_state' %}selected{% endif %}>State</option>
+                                                <option value="originator" {% if mapping.field_name == 'originator' %}selected{% endif %}>Originator</option>
+                                                <option value="date_entered" {% if mapping.field_name == 'date_entered' %}selected{% endif %}>Date Entered</option>
+                                                <option value="project_start_date" {% if mapping.field_name == 'project_start_date' %}selected{% endif %}>Start Date</option>
+                                                <option value="phone" {% if mapping.field_name == 'phone' %}selected{% endif %}>Phone</option>
+                                                <option value="type_of_contract" {% if mapping.field_name == 'type_of_contract' %}selected{% endif %}>Contract Type</option>
+                                                <option value="expenses" {% if mapping.field_name == 'expenses' %}selected{% endif %}>Expenses</option>
+                                            </select>
+                                            <input type="hidden" name="field_{{ forloop.counter0 }}_value" value="{{ mapping.value }}">
+                                            <input type="hidden" name="field_{{ forloop.counter0 }}_label" value="{{ mapping.label }}">
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if mapping.confidence >= 0.9 %}success{% elif mapping.confidence >= 0.7 %}warning{% else %}secondary{% endif %}">
+                                                {% widthratio mapping.confidence 1 100 %}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="field_{{ forloop.counter0 }}_accept" {% if mapping.auto_mapped %}checked{% endif %}>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">{{ parsed.field_mappings|length }} fields auto-detected</small>
+                            <button type="submit" class="btn btn-primary">Update Field Mappings</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Raw pairs fallback when parser cannot map fields -->
             {% if parsed.raw_pairs %}
             <div class="card mb-4">
-                <div class="card-header"><h5 class="card-title mb-0">Detected Fields (Raw)</h5></div>
+                <div class="card-header"><h5 class="card-title mb-0">All Detected Key-Value Pairs</h5></div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm">
@@ -274,6 +348,108 @@
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success">Create Project</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header"><h5 class="card-title mb-0">Create New Client & Project</h5></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Create both a new client and project simultaneously from this scan entry.</p>
+                    <form method="post" action="{% url 'billing:pif_create_client_and_project_from_result' result.id %}">
+                        {% csrf_token %}
+                        
+                        <!-- Client Information Section -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Client Information</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Contact Name</label>
+                                {{ create_client_and_project_form.client_name }}
+                                {% if create_client_and_project_form.client_name.errors %}
+                                    <div class="text-danger small">{{ create_client_and_project_form.client_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Company Name</label>
+                                {{ create_client_and_project_form.client_company }}
+                                {% if create_client_and_project_form.client_company.errors %}
+                                    <div class="text-danger small">{{ create_client_and_project_form.client_company.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email</label>
+                                    {{ create_client_and_project_form.client_email }}
+                                    {% if create_client_and_project_form.client_email.errors %}
+                                        <div class="text-danger small">{{ create_client_and_project_form.client_email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Phone</label>
+                                    {{ create_client_and_project_form.client_phone }}
+                                    {% if create_client_and_project_form.client_phone.errors %}
+                                        <div class="text-danger small">{{ create_client_and_project_form.client_phone.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Address</label>
+                                {{ create_client_and_project_form.client_address }}
+                                {% if create_client_and_project_form.client_address.errors %}
+                                    <div class="text-danger small">{{ create_client_and_project_form.client_address.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Billing Contact (optional)</label>
+                                    {{ create_client_and_project_form.client_billing_contact }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Billing Email (optional)</label>
+                                    {{ create_client_and_project_form.client_billing_contact_email }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Project Information Section -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Project Information</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Project Title</label>
+                                {{ create_client_and_project_form.project_title }}
+                                {% if create_client_and_project_form.project_title.errors %}
+                                    <div class="text-danger small">{{ create_client_and_project_form.project_title.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Pre-filled from scan where possible.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                {{ create_client_and_project_form.project_description }}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Start Date</label>
+                                    {{ create_client_and_project_form.project_start_date }}
+                                    {% if create_client_and_project_form.project_start_date.errors %}
+                                        <div class="text-danger small">{{ create_client_and_project_form.project_start_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Budget (optional)</label>
+                                    {{ create_client_and_project_form.project_budget }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Create Client & Project</button>
                     </form>
                 </div>
             </div>

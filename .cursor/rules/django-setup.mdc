@@ -1,0 +1,50 @@
+---
+alwaysApply: true
+---
+
+# Django Project Setup & Virtual Environment
+
+## Project Structure
+
+This is a Django project with the main application code located in the `consultingmanager/` directory:
+- **Project Root**: `/Users/jakepfitsch/Documents/django_proj_mgmnt/`
+- **Django App Root**: `/Users/jakepfitsch/Documents/django_proj_mgmnt/consultingmanager/`
+- **Virtual Environment**: `/Users/jakepfitsch/Documents/django_proj_mgmnt/.venv/`
+
+## Activating the Virtual Environment
+
+**Always activate the virtual environment from the project root** before running any Django commands:
+
+```bash
+cd /Users/jakepfitsch/Documents/django_proj_mgmnt
+source .venv/bin/activate
+```
+
+## Running Django Commands
+
+**All Django commands must be run from the `consultingmanager/` directory** (where `manage.py` is located):
+
+```bash
+cd /Users/jakepfitsch/Documents/django_proj_mgmnt/consultingmanager
+python manage.py check              # Check Django configuration
+python manage.py migrate            # Run migrations
+python manage.py runserver          # Start development server
+python manage.py makemigrations     # Create new migrations
+```
+
+## Key Files & Directories
+
+- **manage.py**: [consultingmanager/manage.py](mdc:consultingmanager/manage.py) - Django management script
+- **Settings**: [consultingmanager/consultingmanager/settings.py](mdc:consultingmanager/consultingmanager/settings.py) - Main Django settings
+- **URLs**: [consultingmanager/consultingmanager/urls.py](mdc:consultingmanager/consultingmanager/urls.py) - URL routing
+- **Requirements**: [consultingmanager/requirements.txt](mdc:consultingmanager/requirements.txt) - Python dependencies
+- **Billing App**: [consultingmanager/billing/](mdc:consultingmanager/billing/) - PIF Scanner and billing features
+- **Projects App**: [consultingmanager/projects/](mdc:consultingmanager/projects/) - Project management
+- **Clients App**: [consultingmanager/clients/](mdc:consultingmanager/clients/) - Client management
+
+## Important Notes
+
+1. The virtual environment uses Python 3.9
+2. Always ensure `.venv/bin/activate` is sourced before running Django commands
+3. Django commands should ONLY be run from the `consultingmanager/` directory
+4. When using terminal commands in tools, navigate to the project root first, then activate venv, then navigate to consultingmanager/

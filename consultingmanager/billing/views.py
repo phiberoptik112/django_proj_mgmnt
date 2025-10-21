@@ -26,6 +26,7 @@ from .forms import (
     PIFScanCSVImportForm,
     LinkExistingProjectForm,
     CreateProjectFromScanForm,
+    CreateClientAndProjectFromScanForm,
 )
 from .utils.pif_parser import parse_pif_excel
 
@@ -779,6 +780,9 @@ def pif_scan_result_detail(request, result_id):
     initial_title = result.project_number + ' ' + result.project_name if result.project_number and result.project_name else (result.project_name or '')
     link_form = LinkExistingProjectForm()
     create_form = CreateProjectFromScanForm(initial={'title': initial_title})
+    create_client_and_project_form = CreateClientAndProjectFromScanForm(initial={
+        'project_title': initial_title,
+    })
 
     # Parse PIF for preview if available
     parsed = parse_pif_excel(result.pif_file) if result.pif_file else {}
@@ -838,6 +842,7 @@ def pif_scan_result_detail(request, result_id):
         'result': result,
         'link_form': link_form,
         'create_form': create_form,
+        'create_client_and_project_form': create_client_and_project_form,
         'pif_preview': pif_preview,
         'parsed': parsed,
         'linked': linked,
@@ -928,6 +933,132 @@ def pif_create_project_from_result(request, result_id):
         return redirect('billing:project_dashboard', project_id=project.id)
 
     messages.error(request, 'Please correct the errors in the form.')
+    return redirect('billing:pif_scan_result_detail', result_id=result.id)
+
+@staff_member_required
+@require_http_methods(["POST"])
+def pif_create_client_and_project_from_result(request, result_id):
+    """Create a new Client and a new Project from the scan result and link the project."""
+    result = get_object_or_404(PIFScanResult, id=result_id)
+    form = CreateClientAndProjectFromScanForm(request.POST)
+    if form.is_valid():
+        # Create the new client
+        client = Client.objects.create(
+            name=form.cleaned_data['client_name'],
+            company=form.cleaned_data['client_company'],
+            email=form.cleaned_data['client_email'],
+            phone=form.cleaned_data['client_phone'],
+            address=form.cleaned_data['client_address'],
+            billing_contact=form.cleaned_data.get('client_billing_contact') or '',
+            billing_contact_email=form.cleaned_data.get('client_billing_contact_email') or '',
+        )
+        
+        # Create the new project
+        project = Project.objects.create(
+            client=client,
+            title=form.cleaned_data['project_title'],
+            description=form.cleaned_data.get('project_description') or '',
+            start_date=form.cleaned_data['project_start_date'],
+            budget=form.cleaned_data.get('project_budget'),
+        )
+
+        # Link the scan result to the new project
+        result.project = project
+        result.save()
+
+        # Create PIF from parsed data if available, otherwise seed basics
+        parsed = parse_pif_excel(result.pif_file) if result.pif_file else {}
+        pif = ProjectInformationForm.objects.create(project=project)
+        pif.project_number = parsed.get('project_number') or (result.project_number or '')
+        pif.project_name = parsed.get('project_name') or (result.project_name or '')
+        pif.client_name = parsed.get('client_name') or (client.company or client.name)
+        # Map remaining parsed fields
+        field_names = [f.name for f in ProjectInformationForm._meta.fields if f.name not in ('id', 'project', 'project_number', 'project_name', 'client_name')]
+        for key, val in parsed.items():
+            if key in field_names:
+                setattr(pif, key, val)
+        pif.save()
+
+        # Optionally update project budget from parsed if not supplied in form
+        budget = form.cleaned_data.get('project_budget')
+        if budget is None and parsed.get('project_budget') is not None:
+            project.budget = parsed['project_budget']
+            project.save()
+
+        messages.success(request, f'Created new client "{client.company}" and project from scan result.')
+        return redirect('billing:project_dashboard', project_id=project.id)
+
+    messages.error(request, 'Please correct the errors in the form.')
+    return redirect('billing:pif_scan_result_detail', result_id=result.id)
+
+@staff_member_required
+@require_http_methods(["POST"])
+def pif_update_field_mapping(request, result_id):
+    """Update field mappings from the PIF scan result and apply them to the result."""
+    result = get_object_or_404(PIFScanResult, id=result_id)
+
+    # Re-parse with updated mappings
+    parsed = parse_pif_excel(result.pif_file, use_second_sheet_only=True) if result.pif_file else {}
+
+    # Collect user-confirmed mappings from form
+    updated_fields = {}
+    field_count = 0
+
+    # Iterate through all field_X_mapping entries in POST data
+    while f'field_{field_count}_mapping' in request.POST:
+        field_name = request.POST.get(f'field_{field_count}_mapping')
+        field_value = request.POST.get(f'field_{field_count}_value')
+        is_accepted = f'field_{field_count}_accept' in request.POST
+
+        if field_name and field_value and is_accepted:
+            updated_fields[field_name] = field_value
+
+        field_count += 1
+
+    # Update the result with confirmed values
+    if 'project_number' in updated_fields:
+        result.project_number = updated_fields['project_number']
+    if 'project_name' in updated_fields:
+        result.project_name = updated_fields['project_name']
+    result.save()
+
+    # If linked to a project, update the project's PIF with confirmed mappings
+    if result.project:
+        pif, created = ProjectInformationForm.objects.get_or_create(project=result.project)
+
+        # Map the confirmed fields to PIF
+        for field_name, field_value in updated_fields.items():
+            if hasattr(pif, field_name):
+                # Handle type conversions
+                if field_name in ('fee_contract_amount', 'expenses'):
+                    from decimal import Decimal, InvalidOperation
+                    try:
+                        setattr(pif, field_name, Decimal(str(field_value).replace(',', '')))
+                    except (InvalidOperation, ValueError):
+                        pass
+                elif field_name in ('date_entered', 'project_start_date'):
+                    import pandas as pd
+                    try:
+                        dt = pd.to_datetime(field_value, errors='coerce')
+                        if not pd.isna(dt):
+                            setattr(pif, field_name, dt.date())
+                    except Exception:
+                        pass
+                else:
+                    setattr(pif, field_name, field_value)
+
+        pif.save()
+
+        # Update project budget if contract amount is mapped
+        if 'fee_contract_amount' in updated_fields:
+            try:
+                from decimal import Decimal
+                result.project.budget = Decimal(str(updated_fields['fee_contract_amount']).replace(',', ''))
+                result.project.save()
+            except Exception:
+                pass
+
+    messages.success(request, f'Updated field mappings. {len(updated_fields)} fields confirmed and saved.')
     return redirect('billing:pif_scan_result_detail', result_id=result.id)
 
 @staff_member_required

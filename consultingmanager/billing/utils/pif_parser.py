@@ -44,7 +44,7 @@ def _to_date(value: Any):
         return None
 
 
-def parse_pif_excel(file_path: str) -> Dict[str, Any]:
+def parse_pif_excel(file_path: str, use_second_sheet_only: bool = True) -> Dict[str, Any]:
     """
     Parse a PIF Excel file and return a dict of extracted fields.
 
@@ -58,6 +58,10 @@ def parse_pif_excel(file_path: str) -> Dict[str, Any]:
       special_invoice_instructions, retainer_received, additional_comments
 
     And also: project_budget (Decimal) as a suggested Project.budget value.
+
+    Args:
+        file_path: Path to the Excel file
+        use_second_sheet_only: If True, only parse the second sheet for project data (default True)
     """
     logger.info(f"Parsing PIF Excel file: {file_path}")
     try:
@@ -146,9 +150,19 @@ def parse_pif_excel(file_path: str) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     used_keys = set()
     raw_pairs: List[Tuple[str, str]] = []
+    field_mappings: List[Dict[str, Any]] = []  # Track all potential field mappings with confidence
+
+    # Determine which sheets to parse
+    sheets_to_parse = []
+    if use_second_sheet_only and len(xls.sheet_names) >= 2:
+        sheets_to_parse = [xls.sheet_names[1]]  # Use only the second sheet (index 1)
+        logger.info(f"Using second sheet only: {sheets_to_parse[0]}")
+    else:
+        sheets_to_parse = xls.sheet_names
+        logger.info(f"Using all sheets: {sheets_to_parse}")
 
     # Iterate sheets and extract
-    for sheet_name in xls.sheet_names:
+    for sheet_name in sheets_to_parse:
         try:
             df = pd.read_excel(xls, sheet_name=sheet_name, header=None)
         except Exception:
@@ -158,7 +172,7 @@ def parse_pif_excel(file_path: str) -> Dict[str, Any]:
         for r, c, text in cells:
             lower = text.lower()
             for needle, field_name in PATTERNS:
-                if needle in lower and field_name not in used_keys:
+                if needle in lower:
                     val = neighbor_value(df, r, c)
                     # If no neighbor, try inline "Label: value" in same cell
                     if val is None and ":" in text:
@@ -167,25 +181,50 @@ def parse_pif_excel(file_path: str) -> Dict[str, Any]:
                             val = candidate
                     if val is None:
                         continue
-                    # Convert some fields
-                    if field_name in ("fee_contract_amount", "expenses"):
-                        dec = _to_decimal(val)
-                        if dec is not None:
-                            result[field_name] = dec
-                            if field_name == "fee_contract_amount":
-                                result["project_budget"] = dec
-                    elif field_name in ("date_entered", "project_start_date"):
-                        dt = _to_date(val)
-                        if dt is not None:
-                            result[field_name] = dt
-                    elif field_name == "tax_locations":
-                        parts = [p.strip() for p in str(val).replace(";", ",").split(",") if p.strip()]
-                        if parts:
-                            result[field_name] = parts
-                    else:
-                        result[field_name] = val
-                    used_keys.add(field_name)
-                    raw_pairs.append((needle, str(val)))
+
+                    # Calculate confidence score
+                    confidence = 0.0
+                    if needle == lower:
+                        confidence = 1.0  # Exact match
+                    elif lower.startswith(needle):
+                        confidence = 0.9  # Starts with
+                    elif needle in lower:
+                        confidence = 0.7  # Contains
+
+                    # Only use this mapping if we haven't seen this field yet, or if confidence is higher
+                    if field_name not in used_keys:
+                        # Convert some fields
+                        converted_val = val
+                        if field_name in ("fee_contract_amount", "expenses"):
+                            dec = _to_decimal(val)
+                            if dec is not None:
+                                converted_val = dec
+                                result[field_name] = dec
+                                if field_name == "fee_contract_amount":
+                                    result["project_budget"] = dec
+                        elif field_name in ("date_entered", "project_start_date"):
+                            dt = _to_date(val)
+                            if dt is not None:
+                                converted_val = dt
+                                result[field_name] = dt
+                        elif field_name == "tax_locations":
+                            parts = [p.strip() for p in str(val).replace(";", ",").split(",") if p.strip()]
+                            if parts:
+                                converted_val = parts
+                                result[field_name] = parts
+                        else:
+                            result[field_name] = val
+
+                        used_keys.add(field_name)
+                        field_mappings.append({
+                            "label": text,
+                            "value": str(val),
+                            "converted_value": converted_val,
+                            "field_name": field_name,
+                            "confidence": confidence,
+                            "sheet": sheet_name,
+                            "auto_mapped": True
+                        })
 
             # Collect generic raw pairs even if not mapped
             val2 = neighbor_value(df, r, c)
@@ -198,17 +237,19 @@ def parse_pif_excel(file_path: str) -> Dict[str, Any]:
             elif val2 is not None:
                 raw_pairs.append((text, str(val2)))
 
-    # Deduplicate raw pairs preserving order
+    # Deduplicate raw pairs preserving order - fix the duplicate issue
     seen = set()
     deduped = []
     for k, v in raw_pairs:
-        key = (k.lower(), str(v))
+        # More strict deduplication: use both label and value, case-insensitive
+        key = (k.lower().strip(), str(v).strip())
         if key in seen:
             continue
         seen.add(key)
         deduped.append((k, v))
 
     result["raw_pairs"] = deduped[:150]
+    result["field_mappings"] = field_mappings
     
     # Build CSV-style previews for ALL sheets with content
     csv_previews = []

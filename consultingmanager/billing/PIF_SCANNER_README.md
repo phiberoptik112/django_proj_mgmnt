@@ -14,6 +14,13 @@ The PIF (Project Information Form) Scanner system allows you to scan project dir
 - **Automatic Project Linking**: Link scan results to existing projects in the system
 
 ## Usage
+### 0.5. Accessing the server
+
+Access via local network or VPN, then after that connection is established, (on macOS)
+1. In the Finder, Command+K then connect to server. 
+2. Only when this succeeds will the PIF scanner or django system be able to read the server file system. it is not enough just to have the VPN, you MUST ALSO connect via the file system. 
+
+Note: this will also be true of any of the django file-open actions. 
 
 ### 1. Access the PIF Scanner
 
@@ -277,3 +284,4 @@ The consolidation process:
 - Enhanced project number validation
 - Bulk project linking tools
 - Advanced duplicate detection algorithms
+- Automatic checking of Server connection to avoid loading issues
