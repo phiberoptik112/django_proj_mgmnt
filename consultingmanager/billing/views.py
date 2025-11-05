@@ -777,15 +777,50 @@ def pif_scan_results(request, batch_id):
 def pif_scan_result_detail(request, result_id):
     """Detail page for a single PIF scan result with actions to link or create a project."""
     result = get_object_or_404(PIFScanResult, id=result_id)
+    
+    # Parse PIF for preview if available
+    parsed = parse_pif_excel(result.pif_file) if result.pif_file else {}
+    
+    # Build initial data from parsed PIF
     initial_title = result.project_number + ' ' + result.project_name if result.project_number and result.project_name else (result.project_name or '')
+    
+    # Construct address from parsed fields
+    address_parts = []
+    if parsed.get('billing_address_line_1'):
+        address_parts.append(parsed['billing_address_line_1'])
+    if parsed.get('billing_address_line_2'):
+        address_parts.append(parsed['billing_address_line_2'])
+    
+    # Add city, state, zip on one line if available
+    city_state_zip = []
+    if parsed.get('project_location_city'):
+        city_state_zip.append(parsed['project_location_city'])
+    if parsed.get('project_location_state'):
+        city_state_zip.append(parsed['project_location_state'])
+    if parsed.get('billing_zip'):
+        city_state_zip.append(parsed['billing_zip'])
+    if city_state_zip:
+        address_parts.append(', '.join(city_state_zip))
+    
+    initial_address = '\n'.join(address_parts) if address_parts else ''
+    
+    # Pre-populate form with parsed data
     link_form = LinkExistingProjectForm()
     create_form = CreateProjectFromScanForm(initial={'title': initial_title})
     create_client_and_project_form = CreateClientAndProjectFromScanForm(initial={
+        # Client fields
+        'client_name': parsed.get('billing_contact') or '',
+        'client_company': parsed.get('client_name') or '',
+        'client_email': parsed.get('billing_contact_email') or '',
+        'client_phone': parsed.get('phone') or '',
+        'client_address': initial_address,
+        'client_billing_contact': parsed.get('billing_contact') or '',
+        'client_billing_contact_email': parsed.get('billing_contact_email') or '',
+        # Project fields
         'project_title': initial_title,
+        'project_start_date': parsed.get('project_start_date') or '',
+        'project_budget': parsed.get('fee_contract_amount') or parsed.get('project_budget') or '',
     })
-
-    # Parse PIF for preview if available
-    parsed = parse_pif_excel(result.pif_file) if result.pif_file else {}
     pif_preview = {
         'pif_file': result.pif_file,
         'rows': result.rows,

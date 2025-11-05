@@ -353,10 +353,17 @@
             </div>
 
             <div class="card mt-4">
-                <div class="card-header"><h5 class="card-title mb-0">Create New Client & Project</h5></div>
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Create New Client & Project</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="autoFillBtn">
+                            <i class="bi bi-magic"></i> Auto-fill from PIF Data
+                        </button>
+                    </div>
+                </div>
                 <div class="card-body">
                     <p class="text-muted small mb-3">Create both a new client and project simultaneously from this scan entry.</p>
-                    <form method="post" action="{% url 'billing:pif_create_client_and_project_from_result' result.id %}">
+                    <form method="post" action="{% url 'billing:pif_create_client_and_project_from_result' result.id %}" id="clientProjectForm">
                         {% csrf_token %}
                         
                         <!-- Client Information Section -->
@@ -456,6 +463,87 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const autoFillBtn = document.getElementById('autoFillBtn');
+    
+    // PIF parsed data from Django template
+    const pifData = {
+        client_name: "{{ parsed.billing_contact|default:''|escapejs }}",
+        client_company: "{{ parsed.client_name|default:''|escapejs }}",
+        client_email: "{{ parsed.billing_contact_email|default:''|escapejs }}",
+        client_phone: "{{ parsed.phone|default:''|escapejs }}",
+        billing_address_line_1: "{{ parsed.billing_address_line_1|default:''|escapejs }}",
+        billing_address_line_2: "{{ parsed.billing_address_line_2|default:''|escapejs }}",
+        city: "{{ parsed.project_location_city|default:''|escapejs }}",
+        state: "{{ parsed.project_location_state|default:''|escapejs }}",
+        zip: "{{ parsed.billing_zip|default:''|escapejs }}",
+        client_billing_contact: "{{ parsed.billing_contact|default:''|escapejs }}",
+        client_billing_contact_email: "{{ parsed.billing_contact_email|default:''|escapejs }}",
+        project_title: "{{ pif_preview.project_number|default:'' }} {{ pif_preview.project_name|default:'' }}".trim(),
+        project_start_date: "{{ parsed.project_start_date|default:''|escapejs }}",
+        project_budget: "{{ parsed.fee_contract_amount|default:''|escapejs }}" || "{{ parsed.project_budget|default:''|escapejs }}"
+    };
+    
+    // Auto-fill button click handler
+    if (autoFillBtn) {
+        autoFillBtn.addEventListener('click', function() {
+            const form = document.getElementById('clientProjectForm');
+            
+            // Build address
+            let addressParts = [];
+            if (pifData.billing_address_line_1) addressParts.push(pifData.billing_address_line_1);
+            if (pifData.billing_address_line_2) addressParts.push(pifData.billing_address_line_2);
+            let cityStateZip = [];
+            if (pifData.city) cityStateZip.push(pifData.city);
+            if (pifData.state) cityStateZip.push(pifData.state);
+            if (pifData.zip) cityStateZip.push(pifData.zip);
+            if (cityStateZip.length > 0) addressParts.push(cityStateZip.join(', '));
+            const fullAddress = addressParts.join('\n');
+            
+            // Populate form fields
+            const fields = {
+                'id_client_name': pifData.client_name,
+                'id_client_company': pifData.client_company,
+                'id_client_email': pifData.client_email,
+                'id_client_phone': pifData.client_phone,
+                'id_client_address': fullAddress,
+                'id_client_billing_contact': pifData.client_billing_contact,
+                'id_client_billing_contact_email': pifData.client_billing_contact_email,
+                'id_project_title': pifData.project_title,
+                'id_project_start_date': pifData.project_start_date,
+                'id_project_budget': pifData.project_budget
+            };
+            
+            // Fill each field
+            for (const [fieldId, value] of Object.entries(fields)) {
+                const field = document.getElementById(fieldId);
+                if (field && value) {
+                    field.value = value;
+                    // Add a highlight effect
+                    field.classList.add('border-success');
+                    setTimeout(() => field.classList.remove('border-success'), 2000);
+                }
+            }
+            
+            // Show success message
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Fields Populated!';
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-success');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-primary');
+            }, 2000);
+        });
+    }
+});
+</script>
+
 {% endblock %}
 
 

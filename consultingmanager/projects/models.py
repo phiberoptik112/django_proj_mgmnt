@@ -258,3 +258,46 @@ class RecItemAttribute(models.Model):
         if self.unit:
             return f"{self.value} {self.unit}"
         return self.value
+
+class ProposalScanResult(models.Model):
+    """Stores results from proposal scanner runs"""
+    SCAN_STATUS_CHOICES = [
+        ('found', 'Proposal Found'),
+        ('not_found', 'No Proposal Found'),
+        ('error', 'Error'),
+    ]
+    
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='proposal_scan_results')
+    proposal_file = models.CharField(max_length=1000, blank=True, help_text="Full path to the proposal file if found")
+    raw_text = models.TextField(blank=True, help_text="Extracted text from the proposal document")
+    status = models.CharField(max_length=20, choices=SCAN_STATUS_CHOICES, default='not_found')
+    error_message = models.TextField(blank=True, help_text="Error message if scan failed")
+    scanned_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-scanned_at']
+        verbose_name = "Proposal Scan Result"
+        verbose_name_plural = "Proposal Scan Results"
+    
+    def __str__(self):
+        return f"Proposal Scan - {self.project.title} ({self.status})"
+
+class ProjectScopeCategory(models.Model):
+    """Stores scope categories for projects extracted from proposals"""
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='scope_categories')
+    category_name = models.CharField(max_length=200, help_text="Scope category name (e.g., 'Emergency Generator Noise', 'STC Testing')")
+    confidence_score = models.FloatField(default=0.0, help_text="Confidence score from keyword matching (0.0 to 1.0)")
+    source_file = models.CharField(max_length=1000, blank=True, help_text="Source proposal file path")
+    scan_result = models.ForeignKey('ProposalScanResult', on_delete=models.SET_NULL, null=True, blank=True, related_name='detected_categories')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['project', '-confidence_score', 'category_name']
+        unique_together = ['project', 'category_name']
+        verbose_name = "Project Scope Category"
+        verbose_name_plural = "Project Scope Categories"
+    
+    def __str__(self):
+        return f"{self.project.title} - {self.category_name}"

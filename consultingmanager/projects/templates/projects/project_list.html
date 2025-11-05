@@ -23,16 +23,21 @@
                     </button>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <select name="status" class="form-select" onchange="this.form.submit()">
                     <option value="">All Statuses</option>
-                    <option value="NOT_STARTED" {% if request.GET.status == 'NOT_STARTED' %}selected{% endif %}>Not Started</option>
-                    <option value="IN_PROGRESS" {% if request.GET.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
-                    <option value="ON_HOLD" {% if request.GET.status == 'ON_HOLD' %}selected{% endif %}>On Hold</option>
-                    <option value="COMPLETED" {% if request.GET.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                    <option value="planning" {% if request.GET.status == 'planning' %}selected{% endif %}>Planning</option>
+                    <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="on_hold" {% if request.GET.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
                 </select>
             </div>
-            {% if request.GET.search or request.GET.status %}
+            <div class="col-md-3">
+                <input type="text" name="scope_category" class="form-control" placeholder="Filter by scope category..." 
+                       value="{{ request.GET.scope_category|default:'' }}">
+            </div>
+            {% if request.GET.search or request.GET.status or request.GET.scope_category %}
             <div class="col-md-2">
                 <a href="{% url 'projects:project-list' %}" class="btn btn-outline-secondary w-100">
                     <i class="fas fa-times"></i> Clear
@@ -49,8 +54,9 @@
                             <th>Title</th>
                             <th>Client</th>
                             <th>Status</th>
+                            <th>Scope Categories</th>
                             <th>Start Date</th>
-                            <th>Due Date</th>
+                            <th>End Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -64,18 +70,24 @@
                                 </td>
                                 <td>{{ project.client.name }}</td>
                                 <td>
-                                    {% if project.status == 'NOT_STARTED' %}
-                                        <span class="badge bg-secondary">Not Started</span>
-                                    {% elif project.status == 'IN_PROGRESS' %}
-                                        <span class="badge bg-primary">In Progress</span>
-                                    {% elif project.status == 'ON_HOLD' %}
-                                        <span class="badge bg-warning">On Hold</span>
-                                    {% elif project.status == 'COMPLETED' %}
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-{% if project.status == 'completed' %}success{% elif project.status == 'in_progress' %}primary{% elif project.status == 'planning' %}info{% elif project.status == 'on_hold' %}warning{% else %}danger{% endif %}">
+                                        {{ project.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if project.scope_categories.all %}
+                                        {% for category in project.scope_categories.all|slice:":3" %}
+                                            <span class="badge bg-secondary">{{ category.category_name }}</span>
+                                        {% endfor %}
+                                        {% if project.scope_categories.count > 3 %}
+                                            <span class="text-muted">+{{ project.scope_categories.count|add:"-3" }} more</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ project.start_date|date:"M d, Y" }}</td>
-                                <td>{{ project.due_date|date:"M d, Y" }}</td>
+                                <td>{{ project.end_date|date:"M d, Y"|default:"-" }}</td>
                                 <td>
                                     <div class="btn-group">
                                         <a href="{% url 'projects:project-detail' project.pk %}" class="btn btn-sm btn-info">
@@ -100,7 +112,7 @@
         {% else %}
             <div class="text-center py-4">
                 <p class="text-muted mb-0">
-                    {% if request.GET.search or request.GET.status %}
+                    {% if request.GET.search or request.GET.status or request.GET.scope_category %}
                         No projects found matching your criteria.
                     {% else %}
                         No projects added yet.

@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.views import View
 from django.urls import reverse_lazy
 from django.db.models.functions import TruncWeek
 from django.db.models import Q, Sum, Count, F
@@ -21,7 +22,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Sum
 from django.http import JsonResponse
 from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm, ScopeItemForm, RecItemForm, RecItemVersionForm, RecItemAttributeForm
-from .models import ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, RecItemAttribute
+from .models import ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, RecItemAttribute, ProposalScanResult, ProjectScopeCategory
 
 # Create your views here.
 
@@ -35,6 +36,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset()
         search_query = self.request.GET.get('search', '')
         status_filter = self.request.GET.get('status', '')
+        scope_category_filter = self.request.GET.get('scope_category', '')
         
         if search_query:
             queryset = queryset.filter(
@@ -46,6 +48,9 @@ class ProjectListView(LoginRequiredMixin, ListView):
         
         if status_filter:
             queryset = queryset.filter(status=status_filter)
+        
+        if scope_category_filter:
+            queryset = queryset.filter(scope_categories__category_name__icontains=scope_category_filter).distinct()
             
         return queryset
 
@@ -677,3 +682,131 @@ class RecItemAttributeDeleteView(LoginRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Attribute deleted successfully.')
         return super().delete(request, *args, **kwargs)
+
+# Proposal Scanner Views
+class ProposalScanView(LoginRequiredMixin, View):
+    """View to scan a project's Business folder for proposal files"""
+    
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, pk=project_id)
+        
+        # Get project path from metadata
+        from projects.utils.proposal_scanner import ProposalScanner
+        scanner = ProposalScanner()
+        project_path = scanner.get_project_path_from_metadata(project)
+        
+        if not project_path:
+            messages.error(request, 'Project path not found. Please set up project metadata first.')
+            return redirect('projects:project-detail', pk=project.pk)
+        
+        # Scan for proposals
+        scan_result = scanner.scan_project_business_folder(project_path)
+        
+        if scan_result['status'] == 'error':
+            messages.error(request, f"Error scanning for proposals: {scan_result['error_message']}")
+            return redirect('projects:project-detail', pk=project.pk)
+        
+        if scan_result['status'] == 'not_found':
+            messages.warning(request, 'No proposal files found in Business folder.')
+            return redirect('projects:project-detail', pk=project.pk)
+        
+        # If multiple proposals found, use the first one (most recent)
+        proposal_file = scan_result['proposal_files'][0] if scan_result['proposal_files'] else None
+        
+        if not proposal_file:
+            messages.warning(request, 'No proposal files found.')
+            return redirect('projects:project-detail', pk=project.pk)
+        
+        # Parse the proposal
+        from projects.utils.proposal_parser import ProposalParser
+        parser = ProposalParser(proposal_file)
+        parsed_result = parser.parse()
+        
+        # Create or update scan result
+        scan_result_obj, created = ProposalScanResult.objects.update_or_create(
+            project=project,
+            defaults={
+                'proposal_file': proposal_file,
+                'raw_text': parsed_result.get('raw_text', ''),
+                'status': 'found' if proposal_file else 'not_found',
+                'error_message': parsed_result.get('error', ''),
+            }
+        )
+        
+        # Redirect to scan result detail page
+        return redirect('projects:proposal-scan-result', pk=scan_result_obj.pk)
+
+class ProposalScanResultView(LoginRequiredMixin, DetailView):
+    """View to display proposal scan results with raw text and categorized scope"""
+    model = ProposalScanResult
+    template_name = 'projects/proposal_scan_result.html'
+    context_object_name = 'scan_result'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        scan_result = self.object
+        
+        # Parse the proposal to get categories
+        from projects.utils.proposal_parser import ProposalParser
+        parser = ProposalParser(scan_result.proposal_file)
+        parsed_result = parser.parse()
+        
+        context['raw_text'] = parsed_result.get('raw_text', '')
+        context['structure'] = parsed_result.get('structure', {})
+        context['detected_categories'] = parsed_result.get('categories', [])
+        
+        # Get existing categories for this project
+        context['existing_categories'] = ProjectScopeCategory.objects.filter(
+            project=scan_result.project
+        ).values_list('category_name', flat=True)
+        
+        return context
+
+class ApplyCategoriesView(LoginRequiredMixin, View):
+    """View to apply selected categories to project"""
+    
+    def post(self, request, scan_result_id):
+        scan_result = get_object_or_404(ProposalScanResult, pk=scan_result_id)
+        project = scan_result.project
+        
+        # Get selected categories from form
+        selected_categories = request.POST.getlist('categories')
+        
+        if not selected_categories:
+            messages.warning(request, 'No categories selected.')
+            return redirect('projects:proposal-scan-result', pk=scan_result.pk)
+        
+        # Parse proposal again to get category details
+        from projects.utils.proposal_parser import ProposalParser
+        parser = ProposalParser(scan_result.proposal_file)
+        parsed_result = parser.parse()
+        
+        detected_categories = {cat['category_name']: cat for cat in parsed_result.get('categories', [])}
+        
+        # Create or update ProjectScopeCategory records
+        created_count = 0
+        updated_count = 0
+        
+        for category_name in selected_categories:
+            category_data = detected_categories.get(category_name, {})
+            category_obj, created = ProjectScopeCategory.objects.update_or_create(
+                project=project,
+                category_name=category_name,
+                defaults={
+                    'confidence_score': category_data.get('confidence_score', 0.0),
+                    'source_file': scan_result.proposal_file,
+                    'scan_result': scan_result,
+                }
+            )
+            
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+        
+        if created_count > 0:
+            messages.success(request, f'Successfully added {created_count} scope categor{"y" if created_count == 1 else "ies"}.')
+        if updated_count > 0:
+            messages.info(request, f'Updated {updated_count} existing categor{"y" if updated_count == 1 else "ies"}.')
+        
+        return redirect('projects:project-detail', pk=project.pk)

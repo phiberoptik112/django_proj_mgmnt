@@ -1,0 +1,203 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Proposal Scan Result - {{ scan_result.project.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Proposal Scan Result</h1>
+                <p class="text-muted">{{ scan_result.project.title }}</p>
+            </div>
+            <div>
+                <a href="{% url 'projects:project-detail' scan_result.project.pk %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Project
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Scan Information -->
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Scan Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Project</dt>
+                        <dd class="col-sm-8">
+                            <a href="{% url 'projects:project-detail' scan_result.project.pk %}">
+                                {{ scan_result.project.title }}
+                            </a>
+                        </dd>
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{% if scan_result.status == 'found' %}success{% elif scan_result.status == 'not_found' %}warning{% else %}danger{% endif %}">
+                                {{ scan_result.get_status_display }}
+                            </span>
+                        </dd>
+                        <dt class="col-sm-4">Proposal File</dt>
+                        <dd class="col-sm-8">
+                            <small class="text-muted">{{ scan_result.proposal_file|default:'-' }}</small>
+                        </dd>
+                        <dt class="col-sm-4">Scanned At</dt>
+                        <dd class="col-sm-8">{{ scan_result.scanned_at|date:"F j, Y H:i" }}</dd>
+                        {% if scan_result.error_message %}
+                        <dt class="col-sm-4">Error</dt>
+                        <dd class="col-sm-8">
+                            <small class="text-danger">{{ scan_result.error_message }}</small>
+                        </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Document Structure -->
+            {% if structure.headings %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Document Structure</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-muted">Headings</h6>
+                    <ul class="list-unstyled">
+                        {% for heading in structure.headings %}
+                        <li class="mb-1">
+                            <span class="badge bg-secondary">{{ heading.level }}</span>
+                            {{ heading.text }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Raw Text and Categories -->
+        <div class="col-lg-7">
+            <!-- Detected Categories -->
+            {% if detected_categories %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Detected Scope Categories</h5>
+                    <small class="text-muted">Select categories to apply to project</small>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'projects:apply-categories' scan_result.pk %}">
+                        {% csrf_token %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width:5%">
+                                            <input type="checkbox" id="select-all" title="Select All">
+                                        </th>
+                                        <th style="width:40%">Category</th>
+                                        <th style="width:25%">Confidence</th>
+                                        <th style="width:30%">Keywords Matched</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for category in detected_categories %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" 
+                                                   name="categories" 
+                                                   value="{{ category.category_name }}"
+                                                   id="category-{{ forloop.counter }}"
+                                                   {% if category.category_name in existing_categories %}checked{% endif %}>
+                                        </td>
+                                        <td>
+                                            <label for="category-{{ forloop.counter }}" class="mb-0">
+                                                <strong>{{ category.category_name }}</strong>
+                                            </label>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if category.confidence_score >= 0.8 %}bg-success
+                                                    {% elif category.confidence_score >= 0.5 %}bg-warning
+                                                    {% else %}bg-info{% endif %}" 
+                                                    role="progressbar" 
+                                                    style="width: {{ category.confidence_score|floatformat:0 }}%"
+                                                    aria-valuenow="{{ category.confidence_score }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100">
+                                                    {{ category.confidence_score|floatformat:0 }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {% for keyword in category.keywords_matched|slice:":3" %}
+                                                    {{ keyword }}{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                                {% if category.keywords_matched|length > 3 %}...{% endif %}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Apply Selected Categories
+                            </button>
+                            <a href="{% url 'projects:project-detail' scan_result.project.pk %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p class="text-muted mb-0">No scope categories detected in this proposal.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Raw Text -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Extracted Text</h5>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#rawTextCollapse">
+                        <i class="fas fa-chevron-down"></i> Toggle
+                    </button>
+                </div>
+                <div class="collapse show" id="rawTextCollapse">
+                    <div class="card-body">
+                        <div style="max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">
+                            {{ raw_text|default:"No text extracted." }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all checkbox functionality
+    const selectAllCheckbox = document.getElementById('select-all');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('input[name="categories"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
+

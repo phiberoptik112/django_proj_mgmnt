@@ -44,6 +44,12 @@
             <button id="analyze-recitems-btn" class="btn btn-info" data-project-id="{{ project.pk }}">
                 <i class="fas fa-search"></i> Analyze RecItems
             </button>
+            <form method="post" action="{% url 'projects:proposal-scan' project.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-file-word"></i> Scan Proposal
+                </button>
+            </form>
         </div>
     </div>
 
@@ -155,6 +161,37 @@
                         <canvas id="budgetChart" width="400" height="300"></canvas>
                     {% else %}
                         <p class="text-muted">No budget analysis available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Scope Categories Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Scope Categories</h5>
+                    <small class="text-muted">From Proposal Scanner</small>
+                </div>
+                <div class="card-body">
+                    {% if project.scope_categories.all %}
+                        <div class="list-group">
+                            {% for category in project.scope_categories.all %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong>{{ category.category_name }}</strong>
+                                        <div>
+                                            <span class="badge bg-{% if category.confidence_score >= 0.8 %}success{% elif category.confidence_score >= 0.5 %}warning{% else %}info{% endif %}">
+                                                {{ category.confidence_score|floatformat:0 }}%
+                                            </span>
+                                            <small class="text-muted ms-2">{{ category.created_at|date:"M d, Y" }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No scope categories yet. Use "Scan Proposal" to extract categories from proposal documents.</p>
                     {% endif %}
                 </div>
             </div>

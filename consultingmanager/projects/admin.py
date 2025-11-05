@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Project, ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, RecItemAttribute
+from .models import Project, ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, RecItemAttribute, ProposalScanResult, ProjectScopeCategory
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
@@ -100,3 +100,21 @@ class RecItemAttributeAdmin(admin.ModelAdmin):
     ordering = ('rec_item', 'name')
     raw_id_fields = ('rec_item',)
     readonly_fields = ('created_at', 'updated_at')
+
+@admin.register(ProposalScanResult)
+class ProposalScanResultAdmin(admin.ModelAdmin):
+    list_display = ('project', 'status', 'proposal_file', 'scanned_at')
+    list_filter = ('status', 'scanned_at')
+    search_fields = ('project__title', 'proposal_file')
+    raw_id_fields = ('project',)
+    readonly_fields = ('scanned_at', 'updated_at')
+    ordering = ('-scanned_at',)
+
+@admin.register(ProjectScopeCategory)
+class ProjectScopeCategoryAdmin(admin.ModelAdmin):
+    list_display = ('project', 'category_name', 'confidence_score', 'created_at')
+    list_filter = ('category_name', 'project', 'created_at')
+    search_fields = ('category_name', 'project__title')
+    raw_id_fields = ('project', 'scan_result')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('project', '-confidence_score', 'category_name')

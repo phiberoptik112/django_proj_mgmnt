@@ -50,4 +50,9 @@ urlpatterns = [
     
     # RecItem Analysis URLs
     path('<int:project_id>/analyze-recitems/', views.analyze_project_recitems, name='analyze-recitems'),
+    
+    # Proposal Scanner URLs
+    path('<int:project_id>/scan-proposal/', views.ProposalScanView.as_view(), name='proposal-scan'),
+    path('proposal-scan-result/<int:pk>/', views.ProposalScanResultView.as_view(), name='proposal-scan-result'),
+    path('proposal-scan-result/<int:scan_result_id>/apply-categories/', views.ApplyCategoriesView.as_view(), name='apply-categories'),
 ] 
