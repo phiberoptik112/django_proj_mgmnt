@@ -13,8 +13,11 @@ from decimal import Decimal, InvalidOperation
 from typing import Dict, Any, Optional, List, Tuple
 import logging
 import re
+from pathlib import Path
 
 import pandas as pd
+
+from .volume_access import diagnose_file_access, check_volume_accessible, refresh_volume_access
 
 logger = logging.getLogger(__name__)
 
@@ -148,11 +151,59 @@ def parse_pif_excel(file_path: str, use_second_sheet_only: bool = True) -> Dict[
         use_second_sheet_only: If True, only parse the second sheet for project data (default True)
     """
     logger.info(f"Parsing PIF Excel file: {file_path}")
+    
+    # Check file accessibility first (especially for network volumes)
+    file_check = check_volume_accessible(file_path)
+    
+    if not file_check.get('exists'):
+        # Attempt to refresh volume access if it's a network volume
+        if file_check.get('volume_name'):
+            logger.warning(f"File not found at {file_path}. Attempting to refresh volume access...")
+            refresh_result = refresh_volume_access(file_check['volume_name'])
+            logger.info(f"Volume refresh result: {refresh_result['message']}")
+            
+            # Re-check after refresh attempt
+            file_check = check_volume_accessible(file_path)
+        
+        if not file_check.get('exists'):
+            # Provide comprehensive diagnostics
+            diagnosis = diagnose_file_access(file_path)
+            logger.error(f"File does not exist: {file_path}")
+            logger.error(f"Volume check: {file_check}")
+            if diagnosis.get('suggestions'):
+                for suggestion in diagnosis['suggestions']:
+                    logger.error(f"  Suggestion: {suggestion}")
+            return {}
+    
+    if not file_check.get('readable'):
+        logger.error(f"File exists but is not readable: {file_path}")
+        logger.error(f"File check details: {file_check}")
+        if file_check.get('volume_name'):
+            diagnosis = diagnose_file_access(file_path)
+            if diagnosis.get('suggestions'):
+                for suggestion in diagnosis['suggestions']:
+                    logger.error(f"  Suggestion: {suggestion}")
+        return {}
+    
     try:
         xls = pd.ExcelFile(file_path, engine='openpyxl')
         logger.info(f"Successfully opened Excel file with {len(xls.sheet_names)} sheets: {xls.sheet_names}")
+    except FileNotFoundError as e:
+        # Even though we checked, sometimes the file can disappear between checks
+        logger.error(f"File not found when opening Excel file {file_path}: {e}")
+        if file_check.get('volume_name'):
+            diagnosis = diagnose_file_access(file_path)
+            logger.error(f"Diagnosis: {diagnosis}")
+        return {}
+    except PermissionError as e:
+        logger.error(f"Permission denied opening Excel file {file_path}: {e}")
+        logger.error(f"File check details: {file_check}")
+        return {}
     except Exception as e:
         logger.error(f"Failed to open Excel file {file_path}: {e}")
+        logger.error(f"File check details: {file_check}")
+        # Include error type for better debugging
+        logger.error(f"Error type: {type(e).__name__}")
         return {}
 
     def build_cells(df: pd.DataFrame) -> List[Tuple[int, int, str]]:

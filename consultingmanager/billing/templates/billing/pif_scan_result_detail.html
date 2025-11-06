@@ -19,6 +19,49 @@
         </div>
     </div>
 
+    <!-- Volume Access Diagnostics -->
+    {% if file_check and not file_check.accessible %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle"></i> Volume Access Issue
+                </h5>
+                <p class="mb-2">
+                    <strong>File path:</strong> <code>{{ result.pif_file }}</code>
+                </p>
+                {% if file_check.volume_name %}
+                <p class="mb-2">
+                    <strong>Volume:</strong> {{ file_check.volume_name }}
+                </p>
+                {% endif %}
+                <p class="mb-3">
+                    The file appears to be inaccessible. This is common with network volumes that may need to be refreshed.
+                </p>
+                {% if volume_diagnostics and volume_diagnostics.suggestions %}
+                <div class="mb-3">
+                    <strong>Suggestions:</strong>
+                    <ul class="mb-0">
+                        {% for suggestion in volume_diagnostics.suggestions %}
+                        <li>{{ suggestion }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                <form method="post" action="{% url 'billing:pif_refresh_volume_access' result.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-sync-alt"></i> Refresh Volume Access
+                    </button>
+                </form>
+                <a href="{% url 'billing:pif_scan_result_detail' result.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-redo"></i> Reload Page
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-lg-7">
             <div class="card mb-4">

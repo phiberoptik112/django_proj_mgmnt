@@ -29,6 +29,12 @@ from .forms import (
     CreateClientAndProjectFromScanForm,
 )
 from .utils.pif_parser import parse_pif_excel
+from .utils.volume_access import (
+    check_volume_accessible,
+    diagnose_file_access,
+    refresh_volume_access,
+    attempt_volume_reconnection,
+)
 
 @staff_member_required
 def all_projects_invoicing_summary(request):
@@ -873,6 +879,13 @@ def pif_scan_result_detail(request, result_id):
             'sub2_total': sub2_total,
         }
 
+    # Add volume diagnostics if file path exists
+    volume_diagnostics = None
+    if result.pif_file:
+        file_check = check_volume_accessible(result.pif_file)
+        if not file_check.get('accessible'):
+            volume_diagnostics = diagnose_file_access(result.pif_file)
+
     context = {
         'result': result,
         'link_form': link_form,
@@ -881,8 +894,40 @@ def pif_scan_result_detail(request, result_id):
         'pif_preview': pif_preview,
         'parsed': parsed,
         'linked': linked,
+        'volume_diagnostics': volume_diagnostics,
+        'file_check': check_volume_accessible(result.pif_file) if result.pif_file else None,
     }
     return render(request, 'billing/pif_scan_result_detail.html', context)
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def pif_refresh_volume_access(request, result_id):
+    """Refresh volume access for a PIF scan result."""
+    result = get_object_or_404(PIFScanResult, id=result_id)
+    
+    if not result.pif_file:
+        messages.error(request, 'No PIF file path associated with this result.')
+        return redirect('billing:pif_scan_result_detail', result_id=result.id)
+    
+    # Get volume information
+    file_check = check_volume_accessible(result.pif_file)
+    volume_name = file_check.get('volume_name')
+    
+    if not volume_name:
+        messages.warning(request, 'Could not determine volume name from file path.')
+        return redirect('billing:pif_scan_result_detail', result_id=result.id)
+    
+    # Attempt to refresh/reconnect
+    reconnect_result = attempt_volume_reconnection(volume_name)
+    
+    if reconnect_result['success']:
+        messages.success(request, f"✓ {reconnect_result['best_message']}")
+    else:
+        messages.warning(request, f"⚠ {reconnect_result['best_message']}")
+        messages.info(request, 'Try disconnecting and reconnecting the volume in Finder (Cmd+K).')
+    
+    return redirect('billing:pif_scan_result_detail', result_id=result.id)
 
 
 @staff_member_required

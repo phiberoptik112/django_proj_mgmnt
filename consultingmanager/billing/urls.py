@@ -23,6 +23,7 @@ urlpatterns = [
     path('pif-scanner/batch/<int:batch_id>/delete/', views.pif_scan_batch_delete, name='pif_scan_batch_delete'),
     path('pif-scanner/batch/<int:batch_id>/results/', views.pif_scan_results, name='pif_scan_results'),
     path('pif-scanner/result/<int:result_id>/', views.pif_scan_result_detail, name='pif_scan_result_detail'),
+    path('pif-scanner/result/<int:result_id>/refresh-volume/', views.pif_refresh_volume_access, name='pif_refresh_volume_access'),
     path('pif-scanner/result/<int:result_id>/link-existing/', views.pif_link_to_existing_project, name='pif_link_existing_project'),
     path('pif-scanner/result/<int:result_id>/create-project/', views.pif_create_project_from_result, name='pif_create_project_from_result'),
     path('pif-scanner/result/<int:result_id>/create-client-project/', views.pif_create_client_and_project_from_result, name='pif_create_client_and_project_from_result'),
