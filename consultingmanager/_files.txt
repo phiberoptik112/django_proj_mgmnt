@@ -1,38 +1,17 @@
-File listing for project: /Volumes/KAILUA PROJECTS/2023/P23-026 MCON P956 BEQ and P973 BEQ MCBH Kaneohe/
-Generated on: 2025-11-04 22:14:47
+File listing for project: /Volumes/KAILUA PROJECTS-2/2023/P23-169 Kahului Civic Center/
+Generated on: 2025-11-06 23:42:25
 --------------------------------------------------------------------------------
 
 📁 /
   📄 .DS_Store
 
 📁 Business/
-  📄 .DS_Store
-  📄 2023 Hourly Billing Rates-HI.pdf
-  📄 23088_00LienPartial.pdf
-  📄 C402_2018.Architect-Consultant agreement for Special Services.sample.pdf
-  📄 Contract Transmittal Letter.docx
-  📄 Contract Transmittal Letter.pdf
-  📄 P23-026 MCON P956 and P973 BEQ MCBH - DLAA Fee Proposal updated 2_12_24.pdf
-  📄 P23-026 MCON P956 and P973 BEQ MCBH - DLAA Fee Proposal updated.docx
-  📄 P23-026 MCON P956 and P973 BEQ MCBH - DLAA Fee Proposal.docx
-  📄 P23-026 MCON P956 and P973 BEQ MCBH - DLAA Fee Proposal.pdf
-  📄 P23-026 Post-Award Fees.xlsx
-  📄 PIF 23-026.xlsx
-  📄 UMACCP956-P973_LOC_DLAA.docx
-  📄 UMACCP956-P973_LOC_DLAA.pdf
-
-  📁 Reference Proposals/
-    📄 P23-001 Hickam AFB Acoustical Testing, Phase 2 CO3 - DLAA Fee Proposal.docx
-    📄 P23-006 UH Manoa Mini Master Plan Phase 2, Part 2 Post-Award DLAA Fee Proposal-KMC.docx
-
-  📁 signed docs/
-    📄 23088 D.L Adams Associates LTD. - SF1413 DLAA.pdf
-    📄 23088 D.L Adams Associates LTD. - SF1413.pdf
-    📄 23088 D.L. Adams Associates, Ltd. - EXECUTED AIA.pdf
-    📄 ACORD Form 20240328-163820 Insurance.pdf
-    📄 Exhibit C - Business Representation Certification - Rev.12-1109ny DLAA.pdf
-    📄 Exhibit G EEO DLAA signed.pdf
-    📄 Exhibit H Immigration  Reform Act DLAA signed.pdf
+  📄 2025 Kaiahale O Kahiluhilu Form G-37 (002).pdf
+  📄 23-169 Fees.xlsx
+  📄 HNL23-MF-010_KCC_FeeProposalInfo-2023OCT04.pdf
+  📄 P23-169 Kahului Civic Center - DLAA Fee Proposal.docx
+  📄 P23-169 Kahului Civic Center - DLAA Fee Proposal.pdf
+  📄 PIF P23-169.xlsx
 
 📁 CA/
   📄 .DS_Store
@@ -58,60 +37,36 @@ Generated on: 2025-11-04 22:14:47
   📁 Cut Sheets Acoustical/
 
 📁 Design Files/
-  📄 .DS_Store
 
   📁 EASE/
 
   📁 RA Worksheets/
-    📄 RT60_Room Name #.xlsx
 
 📁 Documents/
-  📄 .DS_Store
-  📄 21-054 Block G Kakaako SD Narrative- LJ - JPdraftv3.docx
-  📄 23-026 Acoustics Coordination Log MCON BEQ P956-957.xlsm
-  📄 23-026 App B - Guidance on Typical MEP Noise Control.pdf
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe Acoustical Basis for Design_PgrmReportv1_1.docx
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe Acoustical Basis for Design_PgrmReportv1_1.pdf
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe Acoustical Basis for Design_v1.docx
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative - details.pdf
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative- JPdraftv1.docx
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative- JP_feedbackv1.docx
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative-feedback_5_17_24.pdf
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative-feedback_5_17_24_HVAC77.pdf
-  📄 23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative.pdf
-  📄 23-026 MCON P956 and P957 MCBH Kaneohe Acoustical Basis for Design Program Report.pdf
-  📄 Acoustic Coordination plans.pdf
-  📄 Consolidated RFP_23-1218.pdf
-  📄 Files (8).zip
-  📄 GOBY_21-054 Block G Kakaako Acoustical Program Report JPdraft2_edits_WH1 SJ1.docx
-  📄 MCON_BEQ_details.pdf
-  📄 PART3_PART4_Consolidated RFP_23-0305 (1).pdf
-  📄 PART3_PART4_Consolidated RFP_23-0305.pdf
-  📄 REF_Coordination with Acoustical.pdf
-  📄 Standard_unitReqs.JPG
-  📄 XX-XX App A - Terminology and Gen Recs.docx
-  📄 XX-XX App B - Guidance on Typical MEP Noise Control.docx
-  📄 XX-XX App C - Sketches and Details.docx
-  📄 XX-XX App C - Sketches and Details.pdf
-  📄 ~$23-026 Acoustics Coordination Log MCON BEQ P956-957.xlsm
-
-  📁 02 - Amendments/
-
-  📁 BaseAccess/
-    📄 MCBH S-7 Form 5532 9-21-BEQ P956 & P973.pdf
-
-  📁 BOD_preFinal/
-    📄 BOD_Prefinal.pdf
+  📄 23-169 Acoustics Coordination Log_ Kahului_Civic_Center.xlsm
+  📄 23-169 Acoustics Coordination Log_ Kahului_Civic_Centerv2.xlsm
+  📄 23-169 DLAA - Kahului Civic Center SD Narrative.pdf
+  📄 23-169 DLAA - Kahului Civic Center SD Narrative_revised.pdf
+  📄 23-169 DLAA - Kahului Civic Center SD Narrative_revised_10_15_24.pdf
+  📄 23-169 Kahului Civic Center SD Narrative DD Comments - JPdraftv1.docx
+  📄 23-169 Kahului Civic Center SD Narrative- JPdraftv1.docx
+  📄 23-169 Kahului Civic Center SD Narrative- JPdraftv1.pdf
+  📄 23-169 Kahului Civic Center SD Narrative- JPdraftv2.docx
+  📄 240531 Kahului Civic Center Apartments Base plans.pdf
+  📄 GOBY23-026 MCON P956 and P957 BEQ MCBH Kaneohe SD Narrative- JPdraftv1 - Copy.docx
+  📄 GOBY_17-08 Ililani DD Acoustical Program Report.docx
+  📄 KCC Framing 240606-Lowney & BASE comments.pdf
+  📄 NA_GenieMat-FIT-Brochure.pdf
+  📄 ~$-169 Kahului Civic Center SD Narrative DD Comments - JPdraftv1.docx
+  📄 ~$-169 Kahului Civic Center SD Narrative- JPdraftv1.docx
+  📄 ~$23-169 Acoustics Coordination Log_ Kahului_Civic_Center.xlsm
 
   📁 Conversations Log/
     📄 XX-XXX Contact Summary.xlsx
 
-  📁 Details/
-    📄 AT-06.dwg
-    📄 AT-07-DLAA.pdf
+  📁 Figures/
     📄 AT-07.bak
     📄 AT-07.dwg
-    📄 AT-09-DLAA.pdf
     📄 AT-09.bak
     📄 AT-09.dwg
     📄 AT-28-DLAA.pdf
@@ -120,45 +75,24 @@ Generated on: 2025-11-04 22:14:47
     📄 CLG-00-DLAA.pdf
     📄 CLG-00.bak
     📄 CLG-00.dwg
-    📄 CMU-1-DLAA.pdf
-    📄 CMU-1.bak
-    📄 CMU-1.dwg
-    📄 CMU-4A-DLAA.pdf
     📄 CMU-4A.bak
     📄 CMU-4A.dwg
-    📄 CONC-2.bak
-    📄 CONC-2.dwg
-    📄 CONC-4-DLAA.pdf
     📄 CONC-4.bak
     📄 CONC-4.dwg
-    📄 HVAC-71.bak
-    📄 HVAC-71.dwg
-    📄 HVAC-72-DLAA.pdf
-    📄 HVAC-72.bak
-    📄 HVAC-72.dwg
-    📄 HVAC-77-DLAA.pdf
-    📄 HVAC-77.bak
-    📄 HVAC-77.dwg
+    📄 FL-04.bak
+    📄 FL-04.dwg
+    📄 FL-CLG-04.bak
+    📄 FL-CLG-04.dwg
+    📄 Kahului_Figures.pdf
     📄 NEW DLAA LOGO.jpg
     📄 plot.log
-    📄 VB-14.bak
-    📄 VB-14.dwg
-    📄 WA-01.dwg
-    📄 WA-07.dwg
-    📄 WA-09.dwg
-    📄 WA-11.dwg
-    📄 WA-12.dwg
-    📄 WA-15-DLAA.pdf
     📄 WA-15.bak
     📄 WA-15.dwg
-    📄 WA-21.dwg
-    📄 WA-22.dwg
-    📄 WA-23.dwg
-    📄 WA-29.dwg
     📄 _DLAA_Titleblock.bak
     📄 _DLAA_Titleblock.dwg
 
   📁 Specifications/
+    📄 241108 KCCR 100% DD Outline Specifications.pdf
 
 📁 Drawings/
   📄 .DS_Store
@@ -170,15 +104,16 @@ Generated on: 2025-11-04 22:14:47
   📁 Current Drawings/
 
   📁 Incoming/
-    📄 24-0110_Final_Concept_Design_Drawings_BOD_submitted 17.pdf
-    📄 24-0110_Final_Concept_Design_Drawings_BOD_submitted.pdf
-    📄 24-0110_Final_Concept_Design_Drawings_BOD_submitted_Adjacency_mechFocus.pdf
-    📄 A-002 Wall Legend.pdf
-    📄 P956 P973 BEQ Mechanical 2023 03 14.pdf
-
-    📁 Pre_final_SilencerSelection/
-      📄 MCBH_BEQ_P956_P957silencerSpec.pdf
-      📄 RFMB-MV-F9.pdf
+    📄 240731 KCCR 100% SD.pdf
+    📄 241108 KCCR 100% DD Set.pdf
+    📄 241108 KCCR 100% DD Set_JPmarkup.pdf
+    📄 250131 KCCR Phase 1_50% CD combined set.pdf
+    📄 250131 KCCR Phase 2_50% CD combined set.pdf
+    📄 250328 KCCR 100CD Project Manual.pdf
+    📄 250328 KCCR Phase 1_100CD.pdf
+    📄 250328 KCCR Phase 2_100CD.pdf
+    📄 Kahului CC Apt_Bldg 1_2_STRU_S24.pdf
+    📄 KCC Framing 240606-Lowney  BASE comments.pdf
 
   📁 Outgoing/
 
@@ -191,567 +126,97 @@ Generated on: 2025-11-04 22:14:47
   📁 Sketches/
 
 📁 Emails/
-  📄 2023-07-17_105758_Kyoko Trancher-Sobue_RFP under Contract Nos. N62478-20-4001 4.msg
-  📄 2023-07-18_103725_Lucas Johnson_FW  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-18_143725_Lucas Johnson_FW  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-21_102010_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-21_103828_Jake  Pfitsch_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-21_142010_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-21_143828_Jake  Pfitsch_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_100553_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_101716_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_140553_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_141716_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_153323_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_163205_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_193323_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-24_203205_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_093309_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_095648_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_101506_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_102644_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_111910_Katy Cichuniec_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_133309_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_135648_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_141506_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_142644_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-25_151910_Katy Cichuniec_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-27_150721_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-27_190721_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-28_101106_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-28_102431_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-28_123157_Katy Cichuniec_P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-07-28_141106_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-28_142431_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-07-28_163157_Katy Cichuniec_P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-07-31_093442_Lucas Johnson_RE  P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-07-31_094101_Maryanne Tane_MCON Project FY22 P956 BEQ   FY23 P973 B.msg
-  📄 2023-07-31_110223_Katy Cichuniec_RE  P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-07-31_133442_Lucas Johnson_RE  P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-07-31_150223_Katy Cichuniec_RE  P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-08-01_150536_Lucas Johnson_RE  P23-026 MCON P956 BEQ MCBH.msg
-  📄 2023-08-01_151023_Lucas Johnson_FW  MCON Project FY22 P956 BEQ   FY23 P9.msg
-  📄 2023-08-01_151857_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-08-01_151909_Kyoko Trancher-Sobue_Automatic reply  RFP under Contract Nos..msg
-  📄 2023-08-01_165825_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-08-01_191023_Lucas Johnson_FW  MCON Project FY22 P956 BEQ   FY23 P9.msg
-  📄 2023-08-01_191857_Lucas Johnson_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-08-01_205825_Kyoko Trancher-Sobue_RE  RFP under Contract Nos. N62478-20-40.msg
-  📄 2023-08-02_055106_Chris Evans_RE  MCON Project FY22 P956 BEQ   FY23 P9.msg
-  📄 2023-08-02_093543_Katy Cichuniec_RE  MCON Project FY22 P956 BEQ   FY23 P9.msg
-  📄 2023-08-02_095106_Chris Evans_RE  MCON Project FY22 P956 BEQ   FY23 P9.msg
-  📄 2023-11-09_112324_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-09_113345_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-09_132811_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-13_155145_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-13_185145_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-14_053911_Katy Cichuniec_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-14_083911_Katy Cichuniec_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2023-11-14_085025_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_092950_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_094230_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_094316_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_094716_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_140215_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_154908_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_170215_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-09_184908_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-12_111839_Jake  Pfitsch_FW  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-12_141839_Jake  Pfitsch_FW  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-12_170327_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-02-12_200327_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-01_114038_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_083906_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_094800_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_115606_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_123906_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_130938_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_133834_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_134930_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_141313_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_170938_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_173439_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_173834_Kyoko Trancher-Sobue_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-13_174930_Jake  Pfitsch_RE  RFP MCON PROJECT FY22 P956 BACHELOR .msg
-  📄 2024-03-14_105832_Jake  Pfitsch_P23-026 into project.msg
-  📄 2024-03-15_135343_Kyoko Trancher-Sobue_RE  23-088 BEQ P956 P973 Acoustic Design.msg
-  📄 2024-03-15_151300_Jake  Pfitsch_RE  P23-026 into project.msg
-  📄 2024-03-15_155430_Kyoko Trancher-Sobue_23-088 BEQ P-956   P-973 - MCB DBIDS App.msg
-  📄 2024-03-18_074135_Kenneth L. Kim_RE  23-088 BEQ P956 P973 Acoustic Design.msg
-  📄 2024-03-18_121535_Jake  Pfitsch_RE  P23-026 into project.msg
-  📄 2024-03-25_104540_Jake  Pfitsch_RE  23-088 BEQ P956 P973 Acoustic Design.msg
-  📄 2024-03-25_113202_Kyoko Trancher-Sobue_FW  23-088 BEQ P956 P973 - AIA - DLAA.msg
-  📄 2024-03-25_130637_Jake  Pfitsch_RE  23088 D.L. Adams Associates, LTD. - .msg
-  📄 2024-03-25_152855_Kyoko Trancher-Sobue_RE  23-088 BEQ P956 P973 Acoustic Design.msg
-  📄 2024-03-25_153202_Kyoko Trancher-Sobue_FW  23-088 BEQ P956 P973 - AIA - DLAA.msg
-  📄 2024-03-25_161114_Rachel Baldos_23088 D.L. Adams Associates, LTD. - AIA .msg
-  📄 2024-03-28_113759_Stephanie Adams-Ball_2024-03-25_161114_Rachel Baldos_23088 D..msg
-  📄 2024-03-28_142003_Chris Evans_Additional Insurance certifications.msg
-  📄 2024-03-28_143909_Jeanne Valentino_Additional Insurance certifications  Two.msg
-  📄 2024-03-28_152138_Ryan Yee_P956 and P973 BEQ  Design Development Su.msg
-  📄 2024-03-29_085251_Chris Evans_RE  23088 D.L. Adams Associates, LTD. - .msg
-  📄 2024-03-29_125517_Rachel Baldos_RE  23088 D.L. Adams Associates, LTD. - .msg
-  📄 2024-03-29_140635_Kyoko Trancher-Sobue_23-088 BEQ P956 P973 Design Schedule Upd.msg
-  📄 2024-04-11_090304_Ryan Yee_P956 and P973 BEQ  Status update.msg
-  📄 2024-04-11_133521_Ryan Yee_P956 and P973 BEQ  New RFI - STC rating .msg
-  📄 2024-04-15_110939_Kyoko Trancher-Sobue_RE  New Invoice from D.L. Adams Associat.msg
-  📄 2024-04-15_150114_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
-  📄 2024-04-15_150939_Kyoko Trancher-Sobue_RE  New Invoice from D.L. Adams Associat.msg
-  📄 2024-04-23_152516_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-04-23_153237_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-04-23_160001_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-04-23_160559_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-04-23_161102_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-04-26_135221_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-04-29_170304_Rachel Baldos_23088 D.L. Adams Associates, Ltd. - EXEC.msg
-  📄 2024-05-03_141637_Jake  Pfitsch_23-026 Ajera setup.msg
-  📄 2024-05-03_181637_Jake  Pfitsch_23-026 Ajera setup.msg
-  📄 2024-05-06_080645_Shelbi Kristie_RE  23-026 Ajera setup.msg
-  📄 2024-05-06_105601_Jake  Pfitsch_RE  23-026 Ajera setup.msg
-  📄 2024-05-06_120645_Shelbi Kristie_RE  23-026 Ajera setup.msg
-  📄 2024-05-06_145601_Jake  Pfitsch_RE  23-026 Ajera setup.msg
-  📄 2024-05-08_144822_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
-  📄 2024-05-13_171104_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-13_171541_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-13_175053_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-13_184824_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-14_055053_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-14_083245_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-15_143503_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-16_093522_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-16_181331_Marlyn Marquez_Invoice  10426 (23088-P956 BEQ MCBH Kane.msg
-  📄 2024-05-17_094824_Shelbi Kristie_RE  Invoice  10426 (23088-P956 BEQ MCBH .msg
-  📄 2024-05-17_101249_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-17_101301_Ryan Yee_Automatic reply  P956 and P973 BEQ  Stat.msg
-  📄 2024-05-17_110951_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-17_131958_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-17_153450_Marlyn Marquez_RE  Invoice  10426 (23088-P956 BEQ MCBH .msg
-  📄 2024-05-19_141036_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-20_160838_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-21_071423_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-21_073134_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-24_161747_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-24_170852_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-05-28_080738_Ryan Yee_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-06-11_120115_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
-  📄 2024-06-12_164404_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-06-12_164415_Ryan Yee_Automatic reply  P956 and P973 BEQ  Stat.msg
-  📄 2024-06-12_165015_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-06-19_105044_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-06-19_132828_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-06-19_152108_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-03_105511_Kyoko Trancher-Sobue_RE  New Invoice from D.L. Adams Associat.msg
-  📄 2024-07-03_154025_Marlyn Marquez_RE  Invoice  104301 (23088-P956 BEQ MCBH.msg
-  📄 2024-07-03_163900_Marlyn Marquez_RE  RE  Invoice  104301 (23088-P956 BEQ .msg
-  📄 2024-07-05_104231_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-06_121705_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-09_113154_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-11_072253_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-11_103925_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-15_033342_JPM_Re  23-088 23029 P-956 973 BEQ - 1st Flo.msg
-  📄 2024-07-15_090135_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-15_110957_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-15_145232_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
-  📄 2024-07-15_151641_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-18_103400_Kenneth L. Kim_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-24_104703_Kyoko Trancher-Sobue_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-24_114107_Jake  Pfitsch_RE  P956 and P973 BEQ  Status update.msg
-  📄 2024-07-28_153554_Lito Panida_Nan BEQ P956   P973 Specifications.msg
-  📄 2024-07-31_103209_Jake  Pfitsch_RE  23-088 BEQ Acoustical Meeting.msg
-  📄 2024-07-31_170649_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-08-01_095559_Kenneth L. Kim_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-08-02_113014_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-08-02_115022_Lito Panida_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-08-02_153358_Jake  Pfitsch_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-08-02_174138_Kenneth L. Kim_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-08-06_151054_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
-  📄 2024-08-12_071301_Kenneth L. Kim_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-08-12_133936_Jake  Pfitsch_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-09-04_114507_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-04_115020_Lito Panida_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_092205_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_094214_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_103504_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_104028_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_104813_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_105627_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-05_113541_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-06_093808_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-06_121519_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-06_164328_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-09_115515_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-09_185604_Lito Panida_Re  BEQ P956   P9073 BOD.msg
-  📄 2024-09-10_085227_Kyoko Trancher-Sobue_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-10_135009_Jake  Pfitsch_RE  BEQ P956   P9073 BOD.msg
-  📄 2024-09-10_185428_Jake  Pfitsch_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-09-11_163240_Marlyn Marquez_Invoice  104301(BEQ KMCBH P956 P973).msg
-  📄 2024-09-12_074914_Kenneth L. Kim_RE  23-088 23029 P956 973 BEQ - Acoustic.msg
-  📄 2024-09-13_124409_Marlyn Marquez_RE  RE  Invoice  104301 (23088-P956 BEQ .msg
-  📄 2024-09-13_131834_Marlyn Marquez_RE  RE  Invoice  104301 (23088-P956 BEQ .msg
-  📄 2024-09-13_133445_Shelbi Kristie_RE  RE  Invoice  104301 (23088-P956 BEQ .msg
-  📄 2024-09-20_114436_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
-  📄 2024-09-24_161619_Marlyn Marquez_RE  RE  Invoice  104301 (23088-P956 BEQ .msg
-  📄 2024-10-10_143528_Marlyn Marquez_D.L. Adams Associates-HI for 23-026 MCON.msg
-  📄 2024-10-28_172815_Kenneth L. Kim_23-088 23029 P956 973 BEQ - Revise Silen.msg
-  📄 2024-11-01_140841_Jake  Pfitsch_RE  23-088 23029 P956 973 BEQ - Revise S.msg
-  📄 2024-11-01_162000_Kenneth L. Kim_RE  23-088 23029 P956 973 BEQ - Revise S.msg
-  📄 2024-11-04_134718_Jake  Pfitsch_RE  23-088 23029 P956 973 BEQ - Revise S.msg
-  📄 2024-11-04_152804_Kenneth L. Kim_RE  23-088 23029 P956 973 BEQ - Revise S.msg
-  📄 2024-11-05_151319_Jake  Pfitsch_RE  23-088 23029 P956 973 BEQ - Revise S.msg
-  📄 2025-01-28_143533_Shelbi Kristie_RE  D.L. Adams Associates-HI for 23-026 .msg
-  📄 2025-02-04_130128_Shelbi Kristie_RE  D.L. Adams Associates-HI for 23-026 .msg
-  📄 2025-02-24_120428_Kyoko Trancher-Sobue_RE  Payment Inquiry.msg
-  📄 2025-02-24_121416_Kyoko Trancher-Sobue_RE  Payment Inquiry.msg
-  📄 2025-02-24_161351_Shelbi Kristie_RE  Payment Inquiry.msg
-  📄 2025-02-24_162345_Kyoko Trancher-Sobue_RE  Payment Inquiry.msg
-  📄 2025-03-07_160955_Marlyn Marquez_RE  D.L. Adams Associates-HI for 23-026 .msg
-  📄 2025-03-10_103039_Shelbi Kristie_RE  D.L. Adams Associates-HI for 23-026 .msg
-  📄 2025-03-12_123959_Shelbi Kristie_RE  D.L. Adams Associates-HI for 23-026 .msg
-  📄 2025-10-02_141053_Chris Evans_FW  P956 P973 - Noise mitigation.msg
-  📄 2025-10-02_201416_Jake  Pfitsch_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-02_202628_Kyoko Trancher-Sobue_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-02_204229_Ben Bridgewater_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_005100_David Harada_Re  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_014500_Jake  Pfitsch_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_020451_David Harada_Re  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_021909_Kyoko Trancher-Sobue_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_022439_Lito Panida_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_023727_Kyoko Trancher-Sobue_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_023818_Scott Suzuki_Re  P956 P973 - Noise mitigation.msg
-  📄 2025-10-03_184709_David Harada_Re  P956 P973 - Noise mitigation.msg
-  📄 2025-10-06_153227_D.L. Adams Accounting_New Invoice from D.L. Adams Associates-H.msg
-  📄 2025-10-07_233751_David Harada_Fwd  P956 P973 - Noise mitigation.msg
-  📄 2025-10-08_013335_David Harada_Fwd  Fwd  P956 P973 - Noise mitigation.msg
-  📄 2025-10-08_025403_Jake  Pfitsch_RE  Fwd  P956 P973 - Noise mitigation.msg
-  📄 2025-10-10_221328_Jake  Pfitsch_RE  P956 P973 - Noise mitigation.msg
-  📄 2025-10-17_102534_Shelbi Kristie_New Client Statement from D.L. Adams Ass.msg
-  📄 2025-10-28_010230_Glenn Oyama_Re  P956 P973 - Noise mitigation.msg
-  📄 2025-10-28_075312_Kevin M. Machida_RE  RE  P956   P973 Gen-set.214 and ATS..msg
-  📄 2025-10-28_153651_Cliff Yuen_RE  Re  RE  P956   P973 Gen-set.214 and .msg
-  📄 2025-10-28_201215_Jake  Pfitsch_RE  Fwd  P956 P973 - Noise mitigation.msg
-  📄 2025-10-28_220810_Jake  Pfitsch_RE  RE  P956   P973 Gen-set.214 and ATS..msg
-  📄 2025-10-28_225507_Kyoko Trancher-Sobue_RE  RE  P956   P973 Gen-set.214 and ATS..msg
-  📄 2025-10-29_003513_Sergi Beltrol_RE  RE  P956   P973 Gen-set.214 and ATS..msg
-  📄 2025-10-29_005456_Kyoko Trancher-Sobue_RE  RE  P956   P973 Gen-set.214 and ATS..msg
-  📄 2025-10-29_175758_Kyoko Trancher-Sobue_RE  P956   P973 Gen-set.214 and ATS.220 .msg
-  📄 2025-11-04_005348_David Harada_Re  P956   P973 Gen-set.214 and ATS.220 .msg
-  📄 2025-11-04_013816_Jake  Pfitsch_RE  P956   P973 Gen-set.214 and ATS.220 .msg
+  📄 2023-10-05_150751_Vicente Caballes_HNL23-MF-010 Kahului Civic Center RFP  R.msg
+  📄 2023-10-05_152814_Hang, Kelly_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-05_160842_Ben Bridgewater_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-05_160924_Ben Bridgewater_FW  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-05_180934_Vicente Caballes_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-06_080307_Ben Bridgewater_FW  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-10_211701_Vicente Caballes_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-11_101701_Ben Bridgewater_FW  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-11_115739_Katy Cichuniec_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-11_120138_Katy Cichuniec_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-10-11_122558_Vicente Caballes_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-11-14_135900_Katy Cichuniec_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2023-11-14_141313_Vicente Caballes_RE  HNL23-MF-010 Kahului Civic Center RF.msg
+  📄 2024-06-12_145052_Elaine Wong_Kahului Civil Center Residential.msg
+  📄 2024-06-12_164200_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-06-12_170957_Jake  Pfitsch_FW  Kahului Civil Center Residential.msg
+  📄 2024-06-12_210957_Jake  Pfitsch_FW  Kahului Civil Center Residential.msg
+  📄 2024-06-13_092020_Shelbi Kristie_RE  Kahului Civil Center Residential.msg
+  📄 2024-06-13_135249_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-07-12_100636_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2024-08-06_151747_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2024-08-12_140003_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-08-12_180003_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-09-26_120338_Elaine Wong_RE  Kahului Civil Center Residential.msg
+  📄 2024-09-26_121537_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-10-02_154723_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2024-10-04_151852_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-10-07_153950_Elaine Wong_RE  Kahului Civil Center Residential.msg
+  📄 2024-10-07_154148_Elaine Wong_RE  Kahului Civil Center Residential.msg
+  📄 2024-10-07_161025_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-10-15_162719_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-11-01_143135_Jake  Pfitsch_RE  Kahului Civil Center Residential.msg
+  📄 2024-11-01_143303_Elaine Wong_RE  Kahului Civil Center Residential.msg
+  📄 2024-11-07_140149_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2024-12-02_140043_Elaine Wong_Kahului Civil Center Residential DD Set .msg
+  📄 2024-12-02_161814_Jake  Pfitsch_RE  Kahului Civil Center Residential DD .msg
+  📄 2024-12-13_144051_Jake  Pfitsch_RE  Kahului Civil Center Residential DD .msg
+  📄 2024-12-16_093139_Elaine Wong_RE  Kahului Civil Center Residential DD .msg
+  📄 2024-12-16_102134_Jake  Pfitsch_RE  Kahului Civil Center Residential DD .msg
+  📄 2024-12-16_102146_Janice Y.K. Li_Automatic reply  Kahului Civil Center Re.msg
+  📄 2025-01-06_114636_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2025-02-01_061139_Elaine Wong_KCCR 50  CD Review.msg
+  📄 2025-02-03_215507_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-02-11_142751_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2025-02-15_021050_Elaine Wong_RE  KCCR 50  CD Review.msg
+  📄 2025-02-19_024411_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-02-21_220822_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-03-12_115207_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2025-03-18_114425_Shelbi Kristie_New Client Statement from D.L. Adams Ass.msg
+  📄 2025-04-08_213025_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-04-08_213529_Elaine Wong_RE  KCCR 50  CD Review.msg
+  📄 2025-04-08_213802_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-04-15_120819_Shelbi Kristie_New Client Statement from D.L. Adams Ass.msg
+  📄 2025-04-24_033107_Elaine Wong_KCCR Door STC requirements.msg
+  📄 2025-04-28_205932_Jake  Pfitsch_RE  KCCR Door STC requirements.msg
+  📄 2025-05-07_015420_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-05-07_031538_Elaine Wong_RE  KCCR 50  CD Review.msg
+  📄 2025-05-07_120138_Shelbi Kristie_New Invoice from D.L. Adams Associates-H.msg
+  📄 2025-05-13_215040_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-05-13_215200_Elaine Wong_RE  KCCR 50  CD Review.msg
+  📄 2025-05-20_145241_Shelbi Kristie_New Client Statement from D.L. Adams Ass.msg
+  📄 2025-06-17_165247_Shelbi Kristie_New Client Statement from D.L. Adams Ass.msg
+  📄 2025-07-14_170227_D.L. Adams Accounting_New Invoice from D.L. Adams Associates-H.msg
+  📄 2025-08-27_154650_Ben Bridgewater_FW  KCCR - GET Tax Form.msg
+  📄 2025-08-27_162157_Ben Bridgewater_FW  KCCR - GET Tax Form.msg
+  📄 2025-08-28_082743_Shelbi Kristie_RE  KCCR - GET Tax Form.msg
+  📄 2025-08-28_083236_Ben Bridgewater_RE  KCCR - GET Tax Form.msg
+  📄 2025-09-02_104528_Shelbi Kristie_GET FORM.msg
+  📄 2025-09-02_141434_Janice Y.K. Li_RE  GET FORM.msg
+  📄 2025-09-18_205425_Janice Y.K. Li_RE  GET FORM.msg
+  📄 2025-09-19_124646_Janice Y.K. Li_RE  GET FORM.msg
+  📄 2025-10-01_202541_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-10-01_204214_Janice Y.K. Li_RE  KCCR 50  CD Review.msg
+  📄 2025-10-02_002338_Jake  Pfitsch_RE  KCCR 50  CD Review.msg
+  📄 2025-10-06_215950_Jake  Pfitsch_RE  KCCR - Noise Study Updates.msg
 
 📁 Mechanical/
-  📄 .DS_Store
-  📄 B&W 558001 Consultant NDA2 HKA.pdf
-  📄 Carrier VAV 35E-7PD Performance Data.pdf
-  📄 efl tec mcbh beq p-956 ahu-doas selections full 2 14 24.pdf
-  📄 efl tec mcbh beq p-973 ahu-doas selections full 2 14 24.pdf
-  📄 greenheck ventilation fans 2024 03 14.pdf
-  📄 MCBH P-956 BEQ ATWB 7-5K12-Z-R.pdf
-  📄 P956 P973 BEQ Mechanical 2023 03 14.pdf
-  📄 RTWD - CH-1 - Consolidated Customer Package r513a.pdf
-
-  📁 6_19_24_update/
-    📄 greenheck ventilation fans 2024 06 19.pdf
-    📄 P-956 P-973_AHU-1_XTI_Preliminary Submittal.pdf
-    📄 P-956 P-973_AHU-2_XTI_Preliminary Submittal.pdf
-    📄 P-956 P-973_AHU-3_XTI_Preliminary Submittal.pdf
-    📄 P-956 P-973_AHU-4_XTI_Preliminary Submittal.pdf
-    📄 P956 P973_DOAS-1_Combined.pdf
-    📄 P956 P973_DOAS-2_Combined.pdf
-    📄 sk klk 1st floor mechanical rooms.pdf
-    📄 sk klk 1st floor mechanical rooms_SilencersAnnotated.pdf
-
-  📁 EMergency_Generator_eval_10_2_25/
-    📄 Cat 7.1 Weather Protective Enclosure.pdf
-    📄 Evapco 1200MBH Cooling Tower Data.pdf
-    📄 Generator Exhaust Noise Calculator.xlsx
-    📄 GOBY19-080A 1632 Young Street Exterior Noise Study Report.docx
-    📄 GOBY20-036 DLAA KBR E-Generator Noise Control Recommendations_rev - ZLW.docx
-    📄 NOA Mail - RE_ P956 P973 - Noise mitigation.pdf
-    📄 RFI-118-RESPONSE-Generator Noise Clariifcation.pdf
-    📄 RFP P956 G40 Site Electrical Utilities.pdf
-    📄 Silencer Data Sheet.pdf
-    📄 Sub.0214_26 32 15_Engine-generator set.pdf
-    📄 UFC 3-540-01 para 2-4.2.2 Noise Mitigation.pdf
-    📄 UFC3-540-01.pdf
-
-  📁 ITR/
-    📄 P-956 P-973_AHU-1_Preliminary Submittal.pdf
-    📄 P-956 P-973_AHU-2_Preliminary Submittal.pdf
-    📄 P-956 P-973_AHU-3_Preliminary Submittal.pdf
-    📄 P-956 P-973_AHU-4_Preliminary Submittal.pdf
-    📄 sk klk 23029 mechanical rooms 2024 07 31.pdf
-    📄 TEC to Arch FY23 P956 P973 BEQ Mechanical ITR 2024 07 26.pdf
-    📄 TEC to Arch FY23 P956 P973 BEQ Mechanical ITR 2024 07 26_JPAnnotation.pdf
+  📄 50percent_CD_Mech_review_focus_1stlevel_offices_v1.pdf
+  📄 KCCR_50percent_CD_Mech_review_focus_1stlevel_offices_v1.pdf
 
   📁 Mechanical Analysis Files/
-    📄 NR_thru_partition.xls
-    📄 NR_thru_partition_AHU1_to_unit.xlsx
-    📄 RC_NC.xlsx
 
   📁 Mechanical Data/
 
     📁 2014-XX-XX Equipment Name/
-
-  📁 Prefinal_submission/
-    📄 sk klk prefinal submittal 2024 10 28.pdf
-
-  📁 Silencers_VA/
-    📄 RD-MV_AHU3 - Copy 9.pdf
-    📄 RD-MV_AHU3.pdf
 
 📁 Photos/
 
   📁 (year)-(month)-(day)_(content description)/
 
 📁 Project Info/
-  📄 N62478_23_R_PC06_0001.pdf
-  📄 N62478_23_R_PC06_0002.pdf
-  📄 N62478_23_R_PC06_0003.pdf
-
-  📁 01 - OrigSolicitation/
-    📄 N62478_23_R_PC06.pdf
-    📄 P_956_Request_for_Proposal_100__Final_30_May_2023.pdf
-    📄 P_973_Request_For_Proposal_100__Final_5_May_2023.pdf
-
-  📁 Site Visit Photos/
-    📄 DSCF3764.JPG
-    📄 DSCF3765.JPG
-    📄 DSCF3766.JPG
-    📄 DSCF3767.JPG
-    📄 DSCF3768.JPG
-    📄 DSCF3769.JPG
-    📄 DSCF3770.JPG
-    📄 DSCF3771.JPG
-    📄 DSCF3772.JPG
-    📄 DSCF3773.JPG
-    📄 DSCF3774.JPG
-    📄 DSCF3775.JPG
-    📄 DSCF3776.JPG
-    📄 DSCF3777.JPG
-    📄 DSCF3778.JPG
-    📄 DSCF3779.JPG
-    📄 DSCF3780.JPG
-    📄 DSCF3781.JPG
-    📄 DSCF3782.JPG
-    📄 DSCF3783.JPG
-    📄 DSCF3784.JPG
-    📄 DSCF3785.JPG
-    📄 DSCF3786.JPG
-    📄 DSCF3787.JPG
-    📄 DSCF3788.JPG
-    📄 DSCF3789.JPG
-    📄 DSCF3790.JPG
-    📄 DSCF3791.JPG
-    📄 DSCF3792.JPG
-    📄 DSCF3793.JPG
-    📄 DSCF3794.JPG
-    📄 DSCF3795.JPG
-    📄 DSCF3796.JPG
-    📄 DSCF3797.JPG
-    📄 DSCF3798.JPG
-    📄 DSCF3799.JPG
-    📄 DSCF3800.JPG
-    📄 DSCF3801.JPG
-    📄 DSCF3802.JPG
-    📄 DSCF3803.JPG
-    📄 DSCF3804.JPG
-    📄 DSCF3805.JPG
-    📄 DSCF3806.JPG
-    📄 DSCF3807.JPG
-    📄 DSCF3808.JPG
-    📄 Thumbs.db
-
-    📁 Base Bid - Bldg 1655 &1656/
-      📄 IMG_7546.JPEG
-      📄 IMG_7547.JPEG
-      📄 IMG_7548.JPEG
-      📄 IMG_7549.JPEG
-      📄 IMG_7550.JPEG
-      📄 IMG_7551.JPEG
-      📄 IMG_7552.JPEG
-      📄 IMG_7553.JPEG
-      📄 IMG_7554.JPEG
-      📄 IMG_7555.JPEG
-      📄 IMG_7556.JPEG
-      📄 IMG_7557.JPEG
-      📄 IMG_7558.JPEG
-      📄 IMG_7559.JPEG
-      📄 IMG_7560.JPEG
-      📄 IMG_7561.JPEG
-      📄 IMG_7562.JPEG
-      📄 IMG_7563.JPEG
-      📄 IMG_7564.JPEG
-      📄 IMG_7565.JPEG
-      📄 IMG_7566.JPEG
-      📄 IMG_7567.JPEG
-      📄 IMG_7568.JPEG
-      📄 IMG_7569.JPEG
-      📄 IMG_7570.JPEG
-      📄 IMG_7571.JPEG
-      📄 IMG_7572.JPEG
-      📄 IMG_7573.JPEG
-      📄 IMG_7574.JPEG
-      📄 IMG_7575.JPEG
-      📄 IMG_7576.JPEG
-      📄 IMG_7577.JPEG
-      📄 IMG_7578.JPEG
-      📄 IMG_7579.JPEG
-      📄 IMG_7580.JPEG
-      📄 IMG_7581.JPEG
-      📄 IMG_7582.JPEG
-      📄 IMG_7583.JPEG
-      📄 IMG_7584.JPEG
-      📄 IMG_7585.JPEG
-      📄 IMG_7586.JPEG
-      📄 IMG_7587.JPEG
-      📄 IMG_7588.JPEG
-      📄 IMG_7589.JPEG
-      📄 IMG_7590.JPEG
-      📄 IMG_7591.JPEG
-      📄 IMG_7592.JPEG
-      📄 IMG_7593.JPEG
-      📄 IMG_7594.JPEG
-      📄 IMG_7595.JPEG
-      📄 IMG_7596.JPEG
-      📄 IMG_7597.JPEG
-      📄 IMG_7598.JPEG
-      📄 IMG_7599.JPEG
-      📄 IMG_7600.JPEG
-      📄 IMG_7601.JPEG
-      📄 IMG_7602.JPEG
-      📄 IMG_7603.JPEG
-      📄 IMG_7604.JPEG
-      📄 IMG_7605.JPEG
-      📄 IMG_7606.JPEG
-      📄 IMG_7607.JPEG
-      📄 IMG_7608.JPEG
-      📄 IMG_7609.JPEG
-      📄 IMG_7610.JPEG
-      📄 IMG_7611.JPEG
-      📄 IMG_7612.JPEG
-      📄 Thumbs.db
-
-    📁 Bid Option 1 - Bldg 386/
-      📄 IMG_7683.JPEG
-      📄 IMG_7684.JPEG
-      📄 IMG_7685.JPEG
-      📄 IMG_7686.JPEG
-      📄 IMG_7687.JPEG
-      📄 IMG_7688.JPEG
-      📄 IMG_7689.JPEG
-      📄 IMG_7690.JPEG
-      📄 IMG_7691.JPEG
-      📄 IMG_7692.JPEG
-      📄 IMG_7693.JPEG
-      📄 IMG_7694.JPEG
-      📄 IMG_7695.JPEG
-      📄 IMG_7696.JPEG
-      📄 IMG_7697.JPEG
-      📄 IMG_7698.JPEG
-      📄 IMG_7699.JPEG
-      📄 IMG_7700.JPEG
-      📄 IMG_7701.JPEG
-      📄 IMG_7702.JPEG
-      📄 IMG_7703.JPEG
-      📄 IMG_7704.JPEG
-      📄 IMG_7705.JPEG
-      📄 IMG_7706.JPEG
-      📄 IMG_7707.JPEG
-      📄 IMG_7708.JPEG
-      📄 IMG_7709.JPEG
-      📄 IMG_7710.JPEG
-      📄 IMG_7711.JPEG
-      📄 IMG_7712.JPEG
-      📄 IMG_7713.JPEG
-      📄 IMG_7714.JPEG
-      📄 IMG_7715.JPEG
-      📄 IMG_7716.JPEG
-      📄 IMG_7717.JPEG
-      📄 IMG_7718.JPEG
-      📄 IMG_7719.JPEG
-      📄 IMG_7720.JPEG
-      📄 IMG_7721.JPEG
-      📄 IMG_7722.JPEG
-      📄 IMG_7723.JPEG
-      📄 IMG_7724.JPEG
-      📄 IMG_7725.JPEG
-      📄 IMG_7726.JPEG
-      📄 IMG_7727.JPEG
-      📄 IMG_7728.JPEG
-      📄 IMG_7729.JPEG
-      📄 Thumbs.db
-
-    📁 Bid Option 2 - Bldg 1634 & 1635/
-      📄 IMG_7613.JPEG
-      📄 IMG_7614.JPEG
-      📄 IMG_7615.JPEG
-      📄 IMG_7616.JPEG
-      📄 IMG_7617.JPEG
-      📄 IMG_7618.JPEG
-      📄 IMG_7619.JPEG
-      📄 IMG_7620.JPEG
-      📄 IMG_7621.JPEG
-      📄 IMG_7622.JPEG
-      📄 IMG_7623.JPEG
-      📄 IMG_7624.JPEG
-      📄 IMG_7625.JPEG
-      📄 IMG_7626.JPEG
-      📄 IMG_7627.JPEG
-      📄 IMG_7628.JPEG
-      📄 IMG_7629.JPEG
-      📄 IMG_7630.JPEG
-      📄 IMG_7631.JPEG
-      📄 IMG_7632.JPEG
-      📄 IMG_7633.JPEG
-      📄 IMG_7634.JPEG
-      📄 IMG_7635.JPEG
-      📄 IMG_7636.JPEG
-      📄 IMG_7637.JPEG
-      📄 IMG_7638.JPEG
-      📄 IMG_7639.JPEG
-      📄 IMG_7640.JPEG
-      📄 IMG_7641.JPEG
-      📄 IMG_7642.JPEG
-      📄 IMG_7643.JPEG
-      📄 IMG_7644.JPEG
-      📄 IMG_7645.JPEG
-      📄 IMG_7646.JPEG
-      📄 IMG_7647.JPEG
-      📄 IMG_7648.JPEG
-      📄 IMG_7649.JPEG
-      📄 IMG_7650.JPEG
-      📄 IMG_7651.JPEG
-      📄 IMG_7652.JPEG
-      📄 IMG_7653.JPEG
-      📄 IMG_7654.JPEG
-      📄 IMG_7655.JPEG
-      📄 IMG_7656.JPEG
-      📄 IMG_7657.JPEG
-      📄 IMG_7658.JPEG
-      📄 IMG_7659.JPEG
-      📄 IMG_7660.JPEG
-      📄 IMG_7661.JPEG
-      📄 IMG_7662.JPEG
-      📄 IMG_7663.JPEG
-      📄 IMG_7664.JPEG
-      📄 IMG_7665.JPEG
-      📄 IMG_7666.JPEG
-      📄 IMG_7667.JPEG
-      📄 IMG_7668.JPEG
-      📄 IMG_7669.JPEG
-      📄 IMG_7670.JPEG
-      📄 IMG_7671.JPEG
-      📄 IMG_7672.JPEG
-      📄 IMG_7673.JPEG
-      📄 IMG_7674.JPEG
-      📄 IMG_7675.JPEG
-      📄 IMG_7676.JPEG
-      📄 IMG_7677.JPEG
-      📄 IMG_7678.JPEG
-      📄 IMG_7679.JPEG
-      📄 IMG_7680.JPEG
-      📄 IMG_7681.JPEG
-      📄 IMG_7682.JPEG
-      📄 Thumbs.db
 
 📁 Submittals/
 

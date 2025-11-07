@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference, PIFScanBatch, PIFScanSchedule, PIFScanResult
+from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference, PIFScanBatch, PIFScanSchedule, PIFScanResult, BillingProgressNote
 
 class BillingPhaseInline(admin.TabularInline):
     model = BillingPhase
@@ -187,3 +187,17 @@ class PIFScanScheduleAdmin(admin.ModelAdmin):
                 self.message_user(request, f'Error running schedule {schedule.name}: {str(e)}', level='ERROR')
     
     run_schedule.short_description = "Run selected schedules"
+
+@admin.register(BillingProgressNote)
+class BillingProgressNoteAdmin(admin.ModelAdmin):
+    list_display = ['project', 'note_text_preview', 'created_by', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['project__title', 'note_text', 'created_by__username']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+
+    def note_text_preview(self, obj):
+        """Show a preview of the note text"""
+        return obj.note_text[:100] + '...' if len(obj.note_text) > 100 else obj.note_text
+
+    note_text_preview.short_description = "Note Preview"

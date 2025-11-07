@@ -62,9 +62,9 @@
     </thead>
     <tbody>
       {% for r in rows %}
-      <tr>
+      <tr class="project-row" data-project-id="{{ r.project.id }}" style="cursor: pointer;">
         <td>{{ r.client.name }} — {{ r.client.company }}</td>
-        <td><a href="{% url 'billing:project_dashboard' r.project.id %}">{{ r.project.title }}</a></td>
+        <td><a href="{% url 'billing:project_dashboard' r.project.id %}" onclick="event.stopPropagation();">{{ r.project.title }}</a></td>
         <td>{{ r.project_manager|default:'—' }}</td>
         <td>{{ r.office|default:'—' }}</td>
         <td>{{ r.project.get_status_display }}</td>
@@ -85,6 +85,47 @@
               {% for m in r.mismatches %}<li>{{ m }}</li>{% endfor %}
             </ul>
           {% else %}—{% endif %}
+        </td>
+      </tr>
+      <!-- Expandable Quick-Look Row -->
+      <tr class="quick-look-row" id="quick-look-{{ r.project.id }}" style="display: none;">
+        <td colspan="17" style="background-color: #f8f9fa; padding: 1.5rem;">
+          <div class="quick-look-content">
+            <div class="row">
+              <div class="col-md-6">
+                <h5>Billing Completion Progress</h5>
+                <div class="progress" style="height: 30px; margin-bottom: 1rem;">
+                  <div class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%;" id="progress-bar-{{ r.project.id }}">
+                    <span class="progress-text">0%</span>
+                  </div>
+                </div>
+
+                <h6>Phase Breakdown</h6>
+                <div id="phases-{{ r.project.id }}" class="mb-3">
+                  <div class="text-muted">Loading phases...</div>
+                </div>
+
+                <h6>Billing Summary</h6>
+                <div id="billing-summary-{{ r.project.id }}">
+                  <div class="text-muted">Loading summary...</div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <h5>Billing Progress Notes</h5>
+                <div id="notes-{{ r.project.id }}" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
+                  <div class="text-muted">Loading notes...</div>
+                </div>
+
+                <div class="form-group">
+                  <label for="new-note-{{ r.project.id }}">Add New Note:</label>
+                  <textarea class="form-control" id="new-note-{{ r.project.id }}" rows="3" placeholder="Enter billing progress note..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="saveNote({{ r.project.id }})">Save Note</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleQuickLook({{ r.project.id }})">Close</button>
+              </div>
+            </div>
+          </div>
         </td>
       </tr>
       {% empty %}
@@ -170,6 +211,41 @@
   </div>
 </div>
 
+<style>
+  .project-row.selected {
+    background-color: #d4edff !important;
+    font-weight: 600;
+  }
+  .project-row:hover {
+    background-color: #e9ecef;
+  }
+  .progress-text {
+    color: #fff;
+    font-weight: 600;
+    line-height: 30px;
+  }
+  .phase-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .phase-item:last-child {
+    border-bottom: none;
+  }
+  .note-item {
+    padding: 0.75rem;
+    border-left: 3px solid #007bff;
+    background-color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .note-meta {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+  }
+</style>
+
 <script>
   (function() {
     const table = document.getElementById('summary-table');
@@ -180,6 +256,7 @@
     const btnSave = document.getElementById('btn-save');
     const saveStatus = document.getElementById('save-status');
     let currentProjectId = null;
+    let currentExpandedRow = null;
 
     function setFormValues(form, values) {
       Object.keys(values || {}).forEach(k => {
@@ -212,15 +289,12 @@
         });
     }
 
-    table.addEventListener('click', function(e) {
-      const row = e.target.closest('tr');
-      if (!row) return;
-      const link = row.querySelector('a[href*="/billing/project/"]');
-      if (!link) return;
-      const m = link.href.match(/\/billing\/project\/(\d+)\//);
-      if (m) {
-        selectRow(m[1]);
-      }
+    // Add click handler for project rows
+    document.querySelectorAll('.project-row').forEach(row => {
+      row.addEventListener('click', function(e) {
+        const projectId = this.getAttribute('data-project-id');
+        toggleQuickLook(projectId);
+      });
     });
 
     btnSave.addEventListener('click', function() {
@@ -245,6 +319,139 @@
       });
     });
   })();
+
+  // Global function for toggling quick-look view
+  function toggleQuickLook(projectId) {
+    const row = document.querySelector(`.project-row[data-project-id="${projectId}"]`);
+    const quickLookRow = document.getElementById(`quick-look-${projectId}`);
+
+    // Close any other expanded rows
+    document.querySelectorAll('.quick-look-row').forEach(qr => {
+      if (qr.id !== `quick-look-${projectId}`) {
+        qr.style.display = 'none';
+      }
+    });
+
+    // Remove highlighting from all rows
+    document.querySelectorAll('.project-row').forEach(r => {
+      r.classList.remove('selected');
+    });
+
+    // Toggle current row
+    if (quickLookRow.style.display === 'none') {
+      quickLookRow.style.display = '';
+      row.classList.add('selected');
+      loadQuickLookData(projectId);
+    } else {
+      quickLookRow.style.display = 'none';
+      row.classList.remove('selected');
+    }
+  }
+
+  // Load quick-look data via API
+  function loadQuickLookData(projectId) {
+    const url = `/billing/api/project/${projectId}/quick-look/`;
+
+    fetch(url, {headers: {'X-Requested-With':'XMLHttpRequest'}})
+      .then(r => r.json())
+      .then(({success, data}) => {
+        if (!success) {
+          console.error('Failed to load quick-look data');
+          return;
+        }
+
+        // Update progress bar
+        const progressBar = document.getElementById(`progress-bar-${projectId}`);
+        progressBar.style.width = `${data.overall_completion}%`;
+        progressBar.querySelector('.progress-text').textContent = `${data.overall_completion}%`;
+
+        // Set progress bar color based on completion
+        if (data.overall_completion < 30) {
+          progressBar.className = 'progress-bar progress-bar-striped bg-danger';
+        } else if (data.overall_completion < 70) {
+          progressBar.className = 'progress-bar progress-bar-striped bg-warning';
+        } else {
+          progressBar.className = 'progress-bar progress-bar-striped bg-success';
+        }
+
+        // Render phases
+        const phasesDiv = document.getElementById(`phases-${projectId}`);
+        if (data.phases && data.phases.length > 0) {
+          phasesDiv.innerHTML = data.phases.map(p => `
+            <div class="phase-item">
+              <span>${p.name}</span>
+              <span><strong>${p.percent_complete}%</strong> (${p.status})</span>
+            </div>
+          `).join('');
+        } else {
+          phasesDiv.innerHTML = '<div class="text-muted">No phases defined</div>';
+        }
+
+        // Render billing summary
+        const summaryDiv = document.getElementById(`billing-summary-${projectId}`);
+        summaryDiv.innerHTML = `
+          <table class="table table-sm table-borderless">
+            <tr><td>Contract Amount:</td><td><strong>$${data.billing_summary.contract_amount}</strong></td></tr>
+            <tr><td>Total Invoiced:</td><td><strong>$${data.billing_summary.total_invoiced}</strong></td></tr>
+            <tr><td>Total Paid:</td><td><strong>$${data.billing_summary.total_paid}</strong></td></tr>
+            <tr><td>Outstanding:</td><td><strong>$${data.billing_summary.outstanding}</strong></td></tr>
+          </table>
+        `;
+
+        // Render notes
+        const notesDiv = document.getElementById(`notes-${projectId}`);
+        if (data.recent_notes && data.recent_notes.length > 0) {
+          notesDiv.innerHTML = data.recent_notes.map(note => `
+            <div class="note-item">
+              <div>${note.note_text}</div>
+              <div class="note-meta">By ${note.created_by} on ${note.created_at}</div>
+            </div>
+          `).join('');
+        } else {
+          notesDiv.innerHTML = '<div class="text-muted">No billing notes yet</div>';
+        }
+      })
+      .catch(err => {
+        console.error('Error loading quick-look data:', err);
+      });
+  }
+
+  // Save billing note
+  function saveNote(projectId) {
+    const textarea = document.getElementById(`new-note-${projectId}`);
+    const noteText = textarea.value.trim();
+
+    if (!noteText) {
+      alert('Please enter a note');
+      return;
+    }
+
+    const url = `/billing/api/project/${projectId}/billing-note/`;
+    const csrfToken = document.querySelector("input[name='csrfmiddlewaretoken']").value;
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ note_text: noteText })
+    })
+    .then(r => r.json())
+    .then(({success, note}) => {
+      if (success) {
+        textarea.value = '';
+        // Reload quick-look data to show new note
+        loadQuickLookData(projectId);
+      } else {
+        alert('Failed to save note');
+      }
+    })
+    .catch(err => {
+      console.error('Error saving note:', err);
+      alert('Error saving note');
+    });
+  }
 </script>
 
 {% endblock %}

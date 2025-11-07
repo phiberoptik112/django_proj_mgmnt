@@ -13,6 +13,10 @@ urlpatterns = [
     # Panel API endpoints
     path('api/project/<int:project_id>/billing-instructions/', views.get_billing_instructions, name='get_billing_instructions'),
     path('api/project/<int:project_id>/billing-instructions/save/', views.save_billing_instructions, name='save_billing_instructions'),
+    # Quick-look API endpoints
+    path('api/project/<int:project_id>/quick-look/', views.get_project_quick_look, name='get_project_quick_look'),
+    path('api/project/<int:project_id>/billing-note/', views.save_billing_progress_note, name='save_billing_note'),
+    path('api/project/<int:project_id>/update-completion/', views.update_project_completion, name='update_project_completion'),
     
     # PIF Scanner URLs
     path('pif-scanner/', views.pif_scanner_dashboard, name='pif_scanner_dashboard'),

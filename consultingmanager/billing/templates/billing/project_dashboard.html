@@ -1,5 +1,58 @@
 {% extends 'base/base.html' %}
 
+{% block extra_css %}
+<style>
+    .custom-slider {
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: #d3d3d3;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+    .custom-slider:hover {
+        opacity: 1;
+    }
+
+    .custom-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #007bff;
+        cursor: pointer;
+    }
+
+    .custom-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #007bff;
+        cursor: pointer;
+    }
+
+    .phase-slider-item {
+        padding: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+    }
+
+    .phase-slider {
+        width: 100%;
+        height: 6px;
+    }
+
+    #completionProgressBar {
+        transition: width 0.3s ease, background-color 0.3s ease;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row mb-4">
@@ -86,6 +139,64 @@
                             <h5>{{ billing_summary.billable_hours|floatformat:1 }}</h5>
                             <small>Billable Hours</small>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Completion Control -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Project Completion</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="overallCompletion" class="form-label">
+                            <strong>Overall Completion: <span id="completionValue">0</span>%</strong>
+                        </label>
+                        <input type="range" class="form-range custom-slider" id="overallCompletion"
+                               min="0" max="100" step="1" value="0">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>0%</span>
+                            <span>25%</span>
+                            <span>50%</span>
+                            <span>75%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar Visualization -->
+                    <div class="mb-3">
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 id="completionProgressBar"
+                                 style="width: 0%"
+                                 aria-valuenow="0"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                                <span id="progressBarText">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase Breakdown -->
+                    <div id="phasesSection">
+                        <h6 class="mt-3 mb-2">Phase Completion:</h6>
+                        <div id="phasesList">
+                            <div class="text-muted">Loading phases...</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" id="saveCompletionBtn" onclick="saveCompletion()">
+                            <i class="fas fa-save"></i> Save Completion
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadCurrentCompletion()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                        <span id="saveStatus" class="text-success" style="display: none; align-self: center;">
+                            <i class="fas fa-check"></i> Saved!
+                        </span>
                     </div>
                 </div>
             </div>
@@ -316,6 +427,202 @@
 </div>
 
 <script>
+const projectId = {{ project.id }};
+let projectPhases = [];
+let overallCompletionValue = 0;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentCompletion();
+
+    // Add event listener to main slider
+    const overallSlider = document.getElementById('overallCompletion');
+    overallSlider.addEventListener('input', function() {
+        updateOverallCompletionDisplay(this.value);
+        distributeCompletionToPhases(this.value);
+    });
+});
+
+function loadCurrentCompletion() {
+    fetch(`/billing/api/project/${projectId}/quick-look/`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(({success, data}) => {
+        if (!success) {
+            console.error('Failed to load completion data');
+            return;
+        }
+
+        projectPhases = data.phases || [];
+        overallCompletionValue = data.overall_completion || 0;
+
+        // Update overall slider and display
+        document.getElementById('overallCompletion').value = overallCompletionValue;
+        updateOverallCompletionDisplay(overallCompletionValue);
+
+        // Render phase sliders
+        renderPhaseSliders();
+    })
+    .catch(err => {
+        console.error('Error loading completion data:', err);
+    });
+}
+
+function updateOverallCompletionDisplay(value) {
+    const intValue = Math.round(value);
+    document.getElementById('completionValue').textContent = intValue;
+    document.getElementById('progressBarText').textContent = intValue + '%';
+
+    const progressBar = document.getElementById('completionProgressBar');
+    progressBar.style.width = intValue + '%';
+    progressBar.setAttribute('aria-valuenow', intValue);
+
+    // Color coding based on completion
+    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+    if (intValue < 30) {
+        progressBar.classList.add('bg-danger');
+    } else if (intValue < 70) {
+        progressBar.classList.add('bg-warning');
+    } else {
+        progressBar.classList.add('bg-success');
+    }
+}
+
+function distributeCompletionToPhases(overallValue) {
+    // Distribute the overall completion evenly across all phases
+    if (projectPhases.length === 0) return;
+
+    const equalValue = parseFloat(overallValue);
+
+    projectPhases.forEach((phase, index) => {
+        phase.percent_complete = equalValue;
+        const phaseSlider = document.getElementById(`phase-slider-${index}`);
+        const phaseValue = document.getElementById(`phase-value-${index}`);
+
+        if (phaseSlider && phaseValue) {
+            phaseSlider.value = equalValue;
+            phaseValue.textContent = Math.round(equalValue);
+        }
+    });
+}
+
+function renderPhaseSliders() {
+    const phasesList = document.getElementById('phasesList');
+
+    if (projectPhases.length === 0) {
+        phasesList.innerHTML = '<div class="text-muted">No phases defined for this project. Phases can be added in the project details.</div>';
+        return;
+    }
+
+    let html = '';
+    projectPhases.forEach((phase, index) => {
+        const completion = phase.percent_complete || 0;
+        html += `
+            <div class="phase-slider-item">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>${phase.name}</strong>
+                    <span class="badge badge-secondary">
+                        <span id="phase-value-${index}">${Math.round(completion)}</span>%
+                    </span>
+                </div>
+                <input type="range"
+                       class="form-range phase-slider"
+                       id="phase-slider-${index}"
+                       min="0"
+                       max="100"
+                       step="1"
+                       value="${completion}"
+                       onchange="updatePhaseCompletion(${index}, this.value)">
+                <small class="text-muted">Status: ${phase.status}</small>
+            </div>
+        `;
+    });
+
+    phasesList.innerHTML = html;
+
+    // Add event listeners to update individual phase values
+    projectPhases.forEach((phase, index) => {
+        const slider = document.getElementById(`phase-slider-${index}`);
+        slider.addEventListener('input', function() {
+            document.getElementById(`phase-value-${index}`).textContent = Math.round(this.value);
+            updateOverallFromPhases();
+        });
+    });
+}
+
+function updatePhaseCompletion(index, value) {
+    projectPhases[index].percent_complete = parseFloat(value);
+    updateOverallFromPhases();
+}
+
+function updateOverallFromPhases() {
+    // Calculate average from all phase sliders
+    if (projectPhases.length === 0) return;
+
+    let total = 0;
+    projectPhases.forEach((phase, index) => {
+        const slider = document.getElementById(`phase-slider-${index}`);
+        if (slider) {
+            total += parseFloat(slider.value);
+        }
+    });
+
+    const average = total / projectPhases.length;
+    overallCompletionValue = average;
+
+    document.getElementById('overallCompletion').value = average;
+    updateOverallCompletionDisplay(average);
+}
+
+function saveCompletion() {
+    const saveBtn = document.getElementById('saveCompletionBtn');
+    const saveStatus = document.getElementById('saveStatus');
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    // Collect phase data
+    const phasesData = projectPhases.map((phase, index) => {
+        const slider = document.getElementById(`phase-slider-${index}`);
+        return {
+            name: phase.name,
+            percent_complete: slider ? parseFloat(slider.value) : phase.percent_complete
+        };
+    });
+
+    fetch(`/billing/api/project/${projectId}/update-completion/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({
+            phases: phasesData
+        })
+    })
+    .then(r => r.json())
+    .then(({success, message}) => {
+        if (success) {
+            saveStatus.style.display = 'inline';
+            setTimeout(() => {
+                saveStatus.style.display = 'none';
+            }, 3000);
+        } else {
+            alert('Error saving completion: ' + (message || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error saving completion:', err);
+        alert('Error saving completion');
+    })
+    .finally(() => {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Completion';
+    });
+}
+
+// Email functions
 function showEmailDetail(emailId) {
     $.get(`/billing/email/${emailId}/detail/`, function(data) {
         $('#emailDetailContent').html(data);
@@ -335,7 +642,7 @@ function saveBillingLink() {
         billing_detail: $('select[name="billing_detail"]').val(),
         notes: $('textarea[name="notes"]').val()
     };
-    
+
     $.ajax({
         url: `/billing/email/${emailId}/link/`,
         method: 'POST',

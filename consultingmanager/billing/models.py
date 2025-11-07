@@ -477,3 +477,19 @@ class PIFScanSchedule(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.frequency})"
+
+class BillingProgressNote(models.Model):
+    """Tracks billing progress notes for projects in the dashboard quick-look view"""
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='billing_progress_notes')
+    note_text = models.TextField(help_text="Billing progress note content")
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='billing_notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Billing Progress Note"
+        verbose_name_plural = "Billing Progress Notes"
+
+    def __str__(self):
+        return f"{self.project.title} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"

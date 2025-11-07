@@ -1299,5 +1299,157 @@ def pif_project_search(request):
             'pif_file': result.pif_file,
             'container_dir': result.container_dir,
         })
-    
+
     return JsonResponse({'results': results})
+
+@login_required
+@require_http_methods(["GET"])
+def get_project_quick_look(request, project_id):
+    """
+    Return quick-look billing data for a project including:
+    - Phase-by-phase completion breakdown
+    - Overall percent completion
+    - Billing summary
+    - Recent billing progress notes (5 most recent)
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    # Get project phases with completion percentages
+    phases = project.phases.all().values('name', 'percent_complete', 'status')
+
+    # Calculate overall percent completion (average of phases)
+    if phases:
+        total_completion = sum(p['percent_complete'] for p in phases)
+        overall_completion = total_completion / len(phases)
+    else:
+        overall_completion = 0.0
+
+    # Get billing summary
+    billing_details = project.billing_details.all()
+    total_invoiced = billing_details.filter(status__in=['sent', 'paid']).aggregate(
+        total=Coalesce(Sum('amount'), Value(Decimal('0.00')), output_field=DecimalField())
+    )['total']
+
+    total_paid = billing_details.filter(status='paid').aggregate(
+        total=Coalesce(Sum('amount'), Value(Decimal('0.00')), output_field=DecimalField())
+    )['total']
+
+    # Get contract amount from PIF or project budget
+    pif = getattr(project, 'pif', None)
+    contract_amount = pif.fee_contract_amount if pif and pif.fee_contract_amount else project.budget
+
+    # Calculate outstanding
+    outstanding = contract_amount - total_paid if contract_amount else Decimal('0.00')
+
+    # Get recent billing progress notes
+    from .models import BillingProgressNote
+    recent_notes = BillingProgressNote.objects.filter(project=project).select_related('created_by')[:5]
+
+    notes_data = []
+    for note in recent_notes:
+        notes_data.append({
+            'id': note.id,
+            'note_text': note.note_text,
+            'created_by': note.created_by.get_full_name() if note.created_by else 'Unknown',
+            'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+
+    data = {
+        'project_id': project.id,
+        'project_title': project.title,
+        'overall_completion': round(overall_completion, 1),
+        'phases': list(phases),
+        'billing_summary': {
+            'contract_amount': str(contract_amount) if contract_amount else '0.00',
+            'total_invoiced': str(total_invoiced),
+            'total_paid': str(total_paid),
+            'outstanding': str(outstanding),
+        },
+        'recent_notes': notes_data,
+    }
+
+    return JsonResponse({'success': True, 'data': data})
+
+@login_required
+@require_http_methods(["POST"])
+def save_billing_progress_note(request, project_id):
+    """
+    Save a new billing progress note for a project
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
+
+    note_text = payload.get('note_text', '').strip()
+
+    if not note_text:
+        return JsonResponse({'success': False, 'error': 'Note text is required'}, status=400)
+
+    # Create the billing progress note
+    from .models import BillingProgressNote
+    note = BillingProgressNote.objects.create(
+        project=project,
+        note_text=note_text,
+        created_by=request.user
+    )
+
+    return JsonResponse({
+        'success': True,
+        'note': {
+            'id': note.id,
+            'note_text': note.note_text,
+            'created_by': note.created_by.get_full_name() if note.created_by else 'Unknown',
+            'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
+        }
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def update_project_completion(request, project_id):
+    """
+    Update project phase completion percentages
+    """
+    project = get_object_or_404(Project, id=project_id)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON payload'}, status=400)
+
+    phases_data = payload.get('phases', [])
+
+    if not phases_data:
+        return JsonResponse({'success': False, 'message': 'No phases data provided'}, status=400)
+
+    # Update each phase
+    updated_count = 0
+    for phase_update in phases_data:
+        phase_name = phase_update.get('name')
+        percent_complete = phase_update.get('percent_complete')
+
+        if phase_name is None or percent_complete is None:
+            continue
+
+        # Find matching phase by name
+        try:
+            phase = project.phases.get(name=phase_name)
+            phase.percent_complete = float(percent_complete)
+            phase.save()
+            updated_count += 1
+        except project.phases.model.DoesNotExist:
+            # Phase not found, skip
+            continue
+        except ValueError:
+            # Invalid percent_complete value
+            continue
+
+    if updated_count == 0:
+        return JsonResponse({'success': False, 'message': 'No phases were updated'}, status=400)
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Updated {updated_count} phase(s) successfully'
+    })
