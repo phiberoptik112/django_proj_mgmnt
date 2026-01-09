@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+# Django Project Environment Setup
+
+Project root folder: /Users/jakepfitsch_home/Documents/django_proj_mgmnt/consultingmanager
+
+Always activate the virtual environment from the project root before running any Django commands:
+1. Navigate to project root
+2. Activate virtual environment using `.venv/bin/activate`
+3. Run Django commands from the consultingmanager/ directory

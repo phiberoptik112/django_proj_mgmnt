@@ -5,6 +5,7 @@ from typing import List, Dict
 from pathlib import Path
 import pdfplumber
 from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 from datetime import datetime
 import matplotlib
 matplotlib.use('Agg')  # Set the backend to non-interactive Agg
@@ -32,6 +33,10 @@ def extract_text_from_file(file_path: str) -> str:
     logger.debug(f"File extension detected: {extension}")
     
     try:
+        if not os.path.isfile(file_path):
+            logger.warning(f"File not found or inaccessible: {file_path}")
+            return ''
+
         if extension == '.txt':
             logger.debug("Processing text file")
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -52,7 +57,15 @@ def extract_text_from_file(file_path: str) -> str:
                 return ' '.join(text)
         elif extension in ['.doc', '.docx']:
             logger.debug("Processing Word document")
-            doc = Document(file_path)
+            if Path(file_path).name.startswith('~$'):
+                logger.info(f"Skipping temporary Word lock file: {file_path}")
+                return ''
+
+            try:
+                doc = Document(file_path)
+            except PackageNotFoundError:
+                logger.warning(f"Unable to open Word document (possibly deleted during scan): {file_path}")
+                return ''
             logger.debug(f"Word document opened successfully. Paragraphs: {len(doc.paragraphs)}")
             return ' '.join(paragraph.text for paragraph in doc.paragraphs)
         else:
@@ -358,6 +371,7 @@ def plot_folder_tree(project_path: str | list[str], folder_structure: dict = Non
     logger.info("Starting folder tree visualization")
     G = nx.DiGraph()
     cmap = get_cmap('viridis')
+    max_nodes_allowed = 2000
 
     if isinstance(project_path, list):
         logger.debug(f"Processing multiple project paths: {len(project_path)} projects")
@@ -421,12 +435,27 @@ def plot_folder_tree(project_path: str | list[str], folder_structure: dict = Non
                 if i == len(components) - 1:
                     G.nodes[node_path]['files'] += file_count
                 parent = node_path
+    if G.number_of_nodes() == 0:
+        logger.warning("No nodes to visualize; skipping folder tree plot")
+        return
+
+    if G.number_of_nodes() > max_nodes_allowed:
+        logger.warning(
+            f"Folder tree has {G.number_of_nodes()} nodes which exceeds the safe limit of {max_nodes_allowed}. Skipping plot generation to conserve memory."
+        )
+        return
+
     logger.debug("Calculating visualization parameters")
     max_files = max([data['files'] for _, data in G.nodes(data=True)]) if G.nodes else 1
     logger.debug(f"Maximum files in any folder: {max_files}")
     logger.debug("Creating plot")
     fig, ax = plt.subplots(figsize=(15, 10))
-    pos = nx.spring_layout(G, k=1, iterations=50)
+    try:
+        pos = nx.spring_layout(G, k=1, iterations=50, seed=42)
+    except MemoryError:
+        logger.error("Insufficient memory to compute folder tree layout; skipping visualization")
+        plt.close(fig)
+        return
     logger.debug("Drawing network graph")
     nx.draw(G, pos,
             node_size=[2000 * (data['files'] / max_files) + 500 for _, data in G.nodes(data=True)],

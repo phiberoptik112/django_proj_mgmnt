@@ -131,3 +131,8 @@ If none of these solutions work:
 3. Check system logs for mount-related errors
 4. Ensure the Django server process has the same user permissions as your Finder session
 
+
+
+
+
+
