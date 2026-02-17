@@ -1,0 +1,54 @@
+{% extends "base/base.html" %}
+
+{% block title %}Quick Scan - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Quick Email Scan</h4>
+                </div>
+                <div class="card-body">
+                    <p>This will scan all emails in the database for <strong>{{ project.title }}</strong> and extract timeline events.</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>{{ email_count }}</strong> emails found for this project.
+                    </div>
+                    
+                    {% if email_count > 0 %}
+                    <p>The scanner will look for:</p>
+                    <ul>
+                        <li>Deadlines and due dates</li>
+                        <li>Meetings and calls</li>
+                        <li>Site visits and field work</li>
+                        <li>Report submittals and deliverables</li>
+                        <li>Project status indicators</li>
+                    </ul>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'files:project-email-timeline' project.id %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Start Scan
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        No emails found for this project. Import emails first before scanning.
+                    </div>
+                    <a href="{% url 'projects:project-detail' project.id %}" class="btn btn-outline-secondary">
+                        Back to Project
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

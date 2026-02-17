@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 # Create your models here.
 
@@ -13,7 +14,7 @@ class Project(models.Model):
     ]
 
     title = models.CharField(max_length=200)
-    client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='projects')
+    client = models.ForeignKey('clients.Client', on_delete=models.PROTECT, related_name='projects')
     description = models.TextField()
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
@@ -24,6 +25,11 @@ class Project(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.client.name}"
+
+    def clean(self):
+        super().clean()
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date': 'End date cannot be before start date.'})
 
     class Meta:
         ordering = ['-created_at']
@@ -301,3 +307,104 @@ class ProjectScopeCategory(models.Model):
     
     def __str__(self):
         return f"{self.project.title} - {self.category_name}"
+
+
+class ProjectTemplate(models.Model):
+    """Template for creating new projects with pre-configured phases and milestones"""
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    default_phases = models.JSONField(
+        default=list,
+        help_text="List of phase configurations: [{'name': 'Phase Name', 'order': 1}, ...]"
+    )
+    default_milestones = models.JSONField(
+        default=list,
+        help_text="List of milestone templates: [{'name': 'Milestone', 'days_from_start': 30}, ...]"
+    )
+    default_scope_categories = models.JSONField(
+        default=list,
+        help_text="List of default scope categories for this template"
+    )
+    estimated_duration_days = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Typical duration in days for this project type"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Project Template"
+        verbose_name_plural = "Project Templates"
+
+    def __str__(self):
+        return self.name
+
+    def apply_to_project(self, project):
+        """Apply this template's phases and milestones to a project"""
+        from datetime import timedelta
+        
+        # Create phases
+        for phase_config in self.default_phases:
+            ProjectPhase.objects.create(
+                project=project,
+                name=phase_config.get('name', 'Unnamed Phase'),
+                order=phase_config.get('order', 0),
+                status='not_started'
+            )
+        
+        # Create milestones
+        for milestone_config in self.default_milestones:
+            days_offset = milestone_config.get('days_from_start', 30)
+            Milestone.objects.create(
+                project=project,
+                name=milestone_config.get('name', 'Milestone'),
+                due_date=project.start_date + timedelta(days=days_offset),
+                source='manual'
+            )
+        
+        # Create scope categories
+        for category_name in self.default_scope_categories:
+            ProjectScopeCategory.objects.create(
+                project=project,
+                category_name=category_name
+            )
+        
+        # Set estimated end date
+        if self.estimated_duration_days and not project.end_date:
+            project.end_date = project.start_date + timedelta(days=self.estimated_duration_days)
+            project.save()
+
+
+class ActivityLog(models.Model):
+    """Audit log for tracking changes to projects and related objects"""
+    ACTION_TYPES = [
+        ('create', 'Created'),
+        ('update', 'Updated'),
+        ('delete', 'Deleted'),
+        ('status_change', 'Status Changed'),
+        ('file_upload', 'File Uploaded'),
+        ('milestone_complete', 'Milestone Completed'),
+        ('invoice_sent', 'Invoice Sent'),
+        ('comment', 'Comment Added'),
+    ]
+    
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='activity_logs')
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=30, choices=ACTION_TYPES)
+    description = models.TextField()
+    object_type = models.CharField(max_length=100, blank=True, help_text="Type of object affected")
+    object_id = models.PositiveIntegerField(null=True, blank=True, help_text="ID of affected object")
+    old_value = models.TextField(blank=True, help_text="Previous value (for updates)")
+    new_value = models.TextField(blank=True, help_text="New value (for updates)")
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Activity Log"
+        verbose_name_plural = "Activity Logs"
+
+    def __str__(self):
+        return f"{self.project.title} - {self.get_action_display()} - {self.created_at}"

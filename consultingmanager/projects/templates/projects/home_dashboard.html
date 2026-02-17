@@ -1,0 +1,383 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Consulting Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 10px;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .activity-item {
+        padding: 12px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    .milestone-overdue {
+        background-color: #fff5f5;
+        border-left: 3px solid #dc3545;
+    }
+    .milestone-upcoming {
+        border-left: 3px solid #0d6efd;
+    }
+    .quick-action-btn {
+        padding: 1rem;
+        border-radius: 10px;
+        transition: all 0.2s;
+    }
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+                Dashboard
+            </h1>
+            <p class="text-muted mb-0">Welcome back! Here's what's happening with your projects.</p>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ total_projects }}</h3>
+                        <small class="text-muted">Total Projects</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ active_projects }}</h3>
+                        <small class="text-muted">Active Projects</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info me-3">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">{{ total_clients }}</h3>
+                        <small class="text-muted">Clients</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">${{ total_outstanding|floatformat:0|default:"0" }}</h3>
+                        <small class="text-muted">Outstanding</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'projects:project-create' %}" class="btn btn-primary quick-action-btn">
+                            <i class="fas fa-plus me-2"></i>New Project
+                        </a>
+                        <a href="{% url 'clients:client-create' %}" class="btn btn-outline-primary quick-action-btn">
+                            <i class="fas fa-user-plus me-2"></i>New Client
+                        </a>
+                        <a href="{% url 'files:file-create' %}" class="btn btn-outline-secondary quick-action-btn">
+                            <i class="fas fa-upload me-2"></i>Upload File
+                        </a>
+                        <a href="{% url 'billing:pif_scanner_dashboard' %}" class="btn btn-outline-info quick-action-btn">
+                            <i class="fas fa-search me-2"></i>PIF Scanner
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Milestones Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-flag me-2 text-primary"></i>Milestones
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if overdue_milestones %}
+                    <h6 class="text-danger mb-3"><i class="fas fa-exclamation-circle me-1"></i>Overdue</h6>
+                    {% for milestone in overdue_milestones %}
+                    <div class="activity-item milestone-overdue px-3 rounded mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ milestone.name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <a href="{% url 'projects:project-detail' pk=milestone.project.pk %}">
+                                        {{ milestone.project.title }}
+                                    </a>
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-danger">{{ milestone.due_date|timesince }} overdue</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    {% if upcoming_milestones %}
+                    <h6 class="text-primary mb-3 {% if overdue_milestones %}mt-4{% endif %}">
+                        <i class="fas fa-calendar me-1"></i>Upcoming (Next 14 Days)
+                    </h6>
+                    {% for milestone in upcoming_milestones %}
+                    <div class="activity-item milestone-upcoming px-3 rounded mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ milestone.name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <a href="{% url 'projects:project-detail' pk=milestone.project.pk %}">
+                                        {{ milestone.project.title }}
+                                    </a>
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ milestone.due_date }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    {% if not overdue_milestones and not upcoming_milestones %}
+                    <p class="text-muted text-center py-3 mb-0">
+                        <i class="fas fa-check-circle me-2"></i>No upcoming milestones
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Recent Projects -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-folder me-2 text-primary"></i>Recent Projects
+                    </h6>
+                    <a href="{% url 'projects:project-list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Client</th>
+                                    <th>Status</th>
+                                    <th>Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in recent_projects %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'projects:project-detail' pk=project.pk %}" class="text-decoration-none">
+                                            {{ project.title }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'clients:client-detail' pk=project.client.pk %}" class="text-decoration-none text-muted">
+                                            {{ project.client.company }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if project.status == 'planning' %}
+                                        <span class="badge bg-secondary">Planning</span>
+                                        {% elif project.status == 'in_progress' %}
+                                        <span class="badge bg-primary">In Progress</span>
+                                        {% elif project.status == 'on_hold' %}
+                                        <span class="badge bg-warning text-dark">On Hold</span>
+                                        {% elif project.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif project.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted">{{ project.updated_at|timesince }} ago</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No projects yet</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Project Status Chart -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>Project Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+            
+            <!-- Overdue Invoices -->
+            {% if overdue_invoices %}
+            <div class="card border-0 shadow-sm mb-4 border-start border-danger border-3">
+                <div class="card-header bg-transparent border-0">
+                    <h6 class="mb-0 text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Overdue Invoices
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for invoice in overdue_invoices %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>#{{ invoice.invoice_number }}</strong>
+                                <br>
+                                <small class="text-muted">{{ invoice.project.title }}</small>
+                            </div>
+                            <span class="badge bg-danger">${{ invoice.amount }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Recent Files -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file me-2 text-primary"></i>Recent Files
+                    </h6>
+                    <a href="{% url 'files:file-list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for file in recent_files %}
+                        <li class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-alt me-3 text-muted"></i>
+                                <div class="flex-grow-1">
+                                    <a href="{% url 'files:file-detail' pk=file.pk %}" class="text-decoration-none">
+                                        {{ file.title|truncatewords:5 }}
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">{{ file.project.title }}</small>
+                                </div>
+                                <small class="text-muted">{{ file.uploaded_at|timesince }}</small>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted py-3">No files yet</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('statusChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ status_labels|safe }},
+                datasets: [{
+                    data: {{ status_counts|safe }},
+                    backgroundColor: [
+                        '#6c757d',  // Planning - gray
+                        '#0d6efd',  // In Progress - blue
+                        '#ffc107',  // On Hold - yellow
+                        '#198754',  // Completed - green
+                        '#dc3545'   // Cancelled - red
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

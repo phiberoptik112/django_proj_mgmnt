@@ -333,3 +333,407 @@ def dashboard_project_details(request, project_id):
         'timeline_data': timeline_data,
         'file_activity_data': file_activity_data,
     }, encoder=DjangoJSONEncoder)
+
+
+# ============================================================================
+# Email Timeline Scanner Views
+# ============================================================================
+
+from django.views.decorators.http import require_POST, require_http_methods
+from django.core.paginator import Paginator
+from .models import EmailScanBatch, EmailTimelineEvent, ProjectStatusIndicator, Email
+
+
+@login_required
+def email_scanner_dashboard(request):
+    """Dashboard for email timeline scanning"""
+    recent_batches = EmailScanBatch.objects.select_related('project').order_by('-created_at')[:10]
+    
+    # Statistics
+    total_batches = EmailScanBatch.objects.count()
+    total_emails_scanned = EmailScanBatch.objects.aggregate(
+        total=Sum('total_emails_scanned')
+    )['total'] or 0
+    total_events = EmailTimelineEvent.objects.count()
+    pending_review = EmailTimelineEvent.objects.filter(status='pending').count()
+    converted_milestones = EmailTimelineEvent.objects.filter(status='converted').count()
+    
+    # Recent events needing review
+    recent_pending = EmailTimelineEvent.objects.filter(
+        status='pending'
+    ).select_related('project', 'email').order_by('-created_at')[:10]
+    
+    context = {
+        'recent_batches': recent_batches,
+        'recent_pending': recent_pending,
+        'stats': {
+            'total_batches': total_batches,
+            'total_emails_scanned': total_emails_scanned,
+            'total_events': total_events,
+            'pending_review': pending_review,
+            'converted_milestones': converted_milestones,
+        }
+    }
+    return render(request, 'files/email_scanner_dashboard.html', context)
+
+
+@login_required
+def email_scan_batch_create(request):
+    """Create a new email scan batch"""
+    if request.method == 'POST':
+        name = request.POST.get('name', '')
+        description = request.POST.get('description', '')
+        project_id = request.POST.get('project')
+        folder_paths_raw = request.POST.get('folder_paths', '')
+        scan_date_from = request.POST.get('scan_date_from') or None
+        scan_date_to = request.POST.get('scan_date_to') or None
+        
+        # Parse folder paths (one per line)
+        folder_paths = [p.strip() for p in folder_paths_raw.split('\n') if p.strip()]
+        
+        # Get project if specified
+        project = None
+        if project_id:
+            project = get_object_or_404(Project, pk=project_id)
+        
+        # Parse dates
+        from datetime import datetime as dt
+        if scan_date_from:
+            try:
+                scan_date_from = dt.strptime(scan_date_from, '%Y-%m-%d').date()
+            except ValueError:
+                scan_date_from = None
+        if scan_date_to:
+            try:
+                scan_date_to = dt.strptime(scan_date_to, '%Y-%m-%d').date()
+            except ValueError:
+                scan_date_to = None
+        
+        batch = EmailScanBatch.objects.create(
+            name=name or f"Scan {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+            description=description,
+            project=project,
+            folder_paths=folder_paths,
+            scan_date_from=scan_date_from,
+            scan_date_to=scan_date_to,
+        )
+        
+        messages.success(request, f'Email scan batch "{batch.name}" created.')
+        return redirect('files:email-scan-batch-detail', batch_id=batch.id)
+    
+    # GET - show form
+    projects = Project.objects.all().order_by('title')
+    context = {
+        'projects': projects,
+    }
+    return render(request, 'files/email_scan_batch_form.html', context)
+
+
+@login_required
+def email_scan_batch_detail(request, batch_id):
+    """View details of an email scan batch"""
+    batch = get_object_or_404(EmailScanBatch, id=batch_id)
+    
+    # Get events for this batch
+    events = batch.events.select_related('email', 'project').order_by('-event_date')[:50]
+    indicators = batch.indicators.select_related('email', 'project').order_by('-indicator_date')[:20]
+    
+    context = {
+        'batch': batch,
+        'events': events,
+        'indicators': indicators,
+        'stats': batch.get_summary_stats(),
+    }
+    return render(request, 'files/email_scan_batch_detail.html', context)
+
+
+@login_required
+@require_POST
+def run_email_scan_batch(request, batch_id):
+    """Run an email scan batch"""
+    batch = get_object_or_404(EmailScanBatch, id=batch_id)
+    
+    if batch.status == 'running':
+        messages.warning(request, 'This batch is already running.')
+        return redirect('files:email-scan-batch-detail', batch_id=batch.id)
+    
+    try:
+        from .utils.email_scanner import EmailScanner
+        scanner = EmailScanner()
+        stats = scanner.run_scan_batch(batch.id)
+        
+        messages.success(
+            request, 
+            f'Scan completed. Processed {stats["emails_scanned"]} emails, '
+            f'found {stats["events_found"]} events.'
+        )
+    except Exception as e:
+        messages.error(request, f'Scan failed: {str(e)}')
+    
+    return redirect('files:email-scan-batch-detail', batch_id=batch.id)
+
+
+@login_required
+@require_POST
+def email_scan_batch_delete(request, batch_id):
+    """Delete an email scan batch"""
+    batch = get_object_or_404(EmailScanBatch, id=batch_id)
+    name = batch.name
+    batch.delete()
+    messages.success(request, f'Scan batch "{name}" deleted.')
+    return redirect('files:email-scanner-dashboard')
+
+
+@login_required
+def email_event_review(request, batch_id=None):
+    """Review pending email timeline events"""
+    events = EmailTimelineEvent.objects.filter(status='pending').select_related(
+        'project', 'email', 'scan_batch'
+    ).order_by('-created_at')
+    
+    if batch_id:
+        events = events.filter(scan_batch_id=batch_id)
+    
+    # Filtering
+    project_id = request.GET.get('project')
+    event_type = request.GET.get('event_type')
+    confidence = request.GET.get('confidence')
+    
+    if project_id:
+        events = events.filter(project_id=project_id)
+    if event_type:
+        events = events.filter(event_type=event_type)
+    if confidence:
+        events = events.filter(confidence=confidence)
+    
+    # Pagination
+    paginator = Paginator(events, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'batch_id': batch_id,
+        'projects': Project.objects.all(),
+        'event_types': EmailTimelineEvent.EVENT_TYPES,
+        'confidence_levels': EmailTimelineEvent.CONFIDENCE_LEVELS,
+        'filters': {
+            'project': project_id,
+            'event_type': event_type,
+            'confidence': confidence,
+        }
+    }
+    return render(request, 'files/email_event_review.html', context)
+
+
+@login_required
+@require_POST
+def confirm_email_event(request, event_id):
+    """Confirm an email timeline event"""
+    event = get_object_or_404(EmailTimelineEvent, id=event_id)
+    
+    event.status = 'confirmed'
+    event.reviewed_by = request.user
+    event.reviewed_at = timezone.now()
+    event.review_notes = request.POST.get('notes', '')
+    event.save()
+    
+    messages.success(request, 'Event confirmed.')
+    
+    # Return to review page or next event
+    next_url = request.POST.get('next', request.META.get('HTTP_REFERER', ''))
+    if next_url:
+        return redirect(next_url)
+    return redirect('files:email-event-review')
+
+
+@login_required
+@require_POST
+def reject_email_event(request, event_id):
+    """Reject an email timeline event"""
+    event = get_object_or_404(EmailTimelineEvent, id=event_id)
+    
+    event.status = 'rejected'
+    event.reviewed_by = request.user
+    event.reviewed_at = timezone.now()
+    event.review_notes = request.POST.get('notes', '')
+    event.save()
+    
+    messages.success(request, 'Event rejected.')
+    
+    next_url = request.POST.get('next', request.META.get('HTTP_REFERER', ''))
+    if next_url:
+        return redirect(next_url)
+    return redirect('files:email-event-review')
+
+
+@login_required
+@require_POST
+def convert_event_to_milestone(request, event_id):
+    """Convert an email timeline event to a project milestone"""
+    event = get_object_or_404(EmailTimelineEvent, id=event_id)
+    
+    if event.milestone:
+        messages.warning(request, 'This event has already been converted to a milestone.')
+        return redirect('files:email-event-review')
+    
+    try:
+        milestone = event.convert_to_milestone(user=request.user)
+        
+        # Update batch statistics
+        if event.scan_batch:
+            event.scan_batch.total_milestones_created += 1
+            event.scan_batch.save()
+        
+        messages.success(request, f'Created milestone: {milestone.name}')
+    except Exception as e:
+        messages.error(request, f'Failed to create milestone: {str(e)}')
+    
+    next_url = request.POST.get('next', request.META.get('HTTP_REFERER', ''))
+    if next_url:
+        return redirect(next_url)
+    return redirect('files:email-event-review')
+
+
+@login_required
+@require_POST
+def bulk_event_action(request):
+    """Handle bulk actions on events"""
+    action = request.POST.get('action')
+    event_ids = request.POST.getlist('event_ids')
+    
+    if not event_ids:
+        messages.warning(request, 'No events selected.')
+        return redirect('files:email-event-review')
+    
+    events = EmailTimelineEvent.objects.filter(id__in=event_ids)
+    count = 0
+    
+    if action == 'confirm':
+        for event in events.filter(status='pending'):
+            event.status = 'confirmed'
+            event.reviewed_by = request.user
+            event.reviewed_at = timezone.now()
+            event.save()
+            count += 1
+        messages.success(request, f'{count} events confirmed.')
+    
+    elif action == 'reject':
+        for event in events.filter(status='pending'):
+            event.status = 'rejected'
+            event.reviewed_by = request.user
+            event.reviewed_at = timezone.now()
+            event.save()
+            count += 1
+        messages.success(request, f'{count} events rejected.')
+    
+    elif action == 'convert':
+        for event in events.filter(status__in=['pending', 'confirmed'], milestone__isnull=True):
+            try:
+                event.convert_to_milestone(user=request.user)
+                count += 1
+            except Exception as e:
+                logger.error(f"Failed to convert event {event.id}: {e}")
+        messages.success(request, f'{count} events converted to milestones.')
+    
+    return redirect('files:email-event-review')
+
+
+@login_required
+def project_email_timeline(request, project_id):
+    """View email-derived timeline for a specific project"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    # Get timeline events
+    events = EmailTimelineEvent.objects.filter(
+        project=project
+    ).select_related('email', 'milestone').order_by('event_date')
+    
+    # Get status indicators
+    indicators = ProjectStatusIndicator.objects.filter(
+        project=project
+    ).select_related('email').order_by('-indicator_date')
+    
+    # Calculate phase inference
+    phase_votes = {}
+    for ind in indicators[:20]:
+        if ind.inferred_phase:
+            phase_votes[ind.inferred_phase] = phase_votes.get(ind.inferred_phase, 0) + 1
+    
+    current_phase = max(phase_votes, key=phase_votes.get) if phase_votes else 'Unknown'
+    
+    # Event statistics
+    event_stats = {
+        'total': events.count(),
+        'pending': events.filter(status='pending').count(),
+        'confirmed': events.filter(status='confirmed').count(),
+        'converted': events.filter(status='converted').count(),
+    }
+    
+    # Upcoming events
+    today = timezone.now().date()
+    upcoming_events = events.filter(event_date__gte=today).order_by('event_date')[:10]
+    past_events = events.filter(event_date__lt=today).order_by('-event_date')[:20]
+    
+    context = {
+        'project': project,
+        'events': events,
+        'indicators': indicators[:20],
+        'current_phase': current_phase,
+        'phase_votes': phase_votes,
+        'event_stats': event_stats,
+        'upcoming_events': upcoming_events,
+        'past_events': past_events,
+    }
+    return render(request, 'files/project_email_timeline.html', context)
+
+
+@login_required
+def quick_project_scan(request, project_id):
+    """Quick scan for a single project's emails"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    if request.method == 'POST':
+        # Create a batch for this project
+        batch = EmailScanBatch.objects.create(
+            name=f"Quick scan - {project.title}",
+            description=f"Quick scan initiated from project detail page",
+            project=project,
+        )
+        
+        try:
+            from .utils.email_scanner import EmailScanner
+            scanner = EmailScanner()
+            stats = scanner.run_scan_batch(batch.id)
+            
+            messages.success(
+                request,
+                f'Scan completed. Found {stats["events_found"]} timeline events '
+                f'from {stats["emails_scanned"]} emails.'
+            )
+        except Exception as e:
+            messages.error(request, f'Scan failed: {str(e)}')
+        
+        return redirect('files:project-email-timeline', project_id=project.id)
+    
+    # GET - show confirmation
+    email_count = Email.objects.filter(project=project).count()
+    context = {
+        'project': project,
+        'email_count': email_count,
+    }
+    return render(request, 'files/quick_project_scan.html', context)
+
+
+@login_required
+def email_event_detail(request, event_id):
+    """View details of a single email timeline event"""
+    event = get_object_or_404(
+        EmailTimelineEvent.objects.select_related('project', 'email', 'scan_batch', 'milestone'),
+        id=event_id
+    )
+    
+    context = {
+        'event': event,
+    }
+    return render(request, 'files/email_event_detail.html', context)

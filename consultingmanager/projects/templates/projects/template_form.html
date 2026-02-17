@@ -1,0 +1,74 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Template - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2>
+        <i class="fas fa-clipboard-list me-2"></i>
+        {% if object %}Edit Template{% else %}Create Project Template{% endif %}
+    </h2>
+    
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" name="name" class="form-control" value="{{ object.name|default:'' }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="3">{{ object.description|default:'' }}</textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Default Phases (JSON)</label>
+                    <textarea name="default_phases" class="form-control font-monospace" rows="5" 
+                              placeholder='[{"name": "Design", "order": 1}, {"name": "Construction", "order": 2}]'>{{ object.default_phases|default:'[]' }}</textarea>
+                    <small class="text-muted">Format: [{"name": "Phase Name", "order": 1}, ...]</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Default Milestones (JSON)</label>
+                    <textarea name="default_milestones" class="form-control font-monospace" rows="5"
+                              placeholder='[{"name": "Kickoff", "days_from_start": 0}, {"name": "Draft Report", "days_from_start": 30}]'>{{ object.default_milestones|default:'[]' }}</textarea>
+                    <small class="text-muted">Format: [{"name": "Milestone", "days_from_start": 30}, ...]</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Default Scope Categories (JSON)</label>
+                    <textarea name="default_scope_categories" class="form-control font-monospace" rows="3"
+                              placeholder='["Sound Isolation", "Mechanical Noise", "Room Acoustics"]'>{{ object.default_scope_categories|default:'[]' }}</textarea>
+                    <small class="text-muted">Format: ["Category 1", "Category 2", ...]</small>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Estimated Duration (days)</label>
+                        <input type="number" name="estimated_duration_days" class="form-control" 
+                               value="{{ object.estimated_duration_days|default:'' }}" min="1">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Status</label>
+                        <div class="form-check mt-2">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {% if object.is_active or not object %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">Active</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Save Template
+                    </button>
+                    <a href="{% url 'projects:template-list' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

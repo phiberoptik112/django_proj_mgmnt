@@ -2,29 +2,153 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.views import View
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db.models.functions import TruncWeek
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 from .models import Project
 from .forms import ProjectForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from files.models import File
+from clients.models import Client
 import json
-from django.views.decorators.http import require_GET
 from django.utils.dateformat import DateFormat
 from django.utils.formats import get_format
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Sum
-from django.http import JsonResponse
 from .forms import ProjectPhaseForm, PhaseWorkLogForm, MilestoneForm, ScopeItemForm, RecItemForm, RecItemVersionForm, RecItemAttributeForm
-from .models import ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, RecItemAttribute, ProposalScanResult, ProjectScopeCategory
+from .models import (
+    ProjectPhase, PhaseWorkLog, Milestone, ScopeItem, RecItem, RecItemVersion, 
+    RecItemAttribute, ProposalScanResult, ProjectScopeCategory, ProjectTemplate, ActivityLog
+)
 
 # Create your views here.
+
+class HomeDashboardView(LoginRequiredMixin, TemplateView):
+    """Main home dashboard with key metrics and activity"""
+    template_name = 'projects/home_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.now().date()
+        
+        # Project counts by status
+        projects = Project.objects.select_related('client')
+        context['total_projects'] = projects.count()
+        context['active_projects'] = projects.filter(status__in=['planning', 'in_progress']).count()
+        context['completed_projects'] = projects.filter(status='completed').count()
+        context['on_hold_projects'] = projects.filter(status='on_hold').count()
+        
+        # Recent projects (last 5)
+        context['recent_projects'] = projects.order_by('-updated_at')[:5]
+        
+        # Upcoming milestones (next 14 days)
+        context['upcoming_milestones'] = Milestone.objects.filter(
+            due_date__gte=today,
+            due_date__lte=today + timedelta(days=14)
+        ).select_related('project').order_by('due_date')[:10]
+        
+        # Overdue milestones
+        context['overdue_milestones'] = Milestone.objects.filter(
+            due_date__lt=today
+        ).select_related('project').order_by('due_date')[:5]
+        
+        # Recent files (last 10)
+        context['recent_files'] = File.objects.select_related('project').order_by('-uploaded_at')[:10]
+        
+        # Client count
+        context['total_clients'] = Client.objects.count()
+        
+        # Projects by status for chart
+        status_data = projects.values('status').annotate(count=Count('id'))
+        context['status_labels'] = [s['status'].replace('_', ' ').title() for s in status_data]
+        context['status_counts'] = [s['count'] for s in status_data]
+        
+        # Billing summary (if billing app available)
+        try:
+            from billing.models import BillingDetail
+            context['total_invoiced'] = BillingDetail.objects.filter(
+                status__in=['sent', 'paid']
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            context['total_outstanding'] = BillingDetail.objects.filter(
+                status__in=['sent', 'overdue']
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # Overdue invoices
+            context['overdue_invoices'] = BillingDetail.objects.filter(
+                status__in=['sent', 'overdue'],
+                due_date__lt=today
+            ).select_related('project').order_by('due_date')[:5]
+        except ImportError:
+            context['total_invoiced'] = 0
+            context['total_outstanding'] = 0
+            context['overdue_invoices'] = []
+        
+        return context
+
+
+@login_required
+@require_GET
+def global_search(request):
+    """Global search endpoint for navbar search"""
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'results': {'projects': [], 'clients': [], 'files': []}})
+    
+    # Search projects
+    projects = Project.objects.filter(
+        Q(title__icontains=query) |
+        Q(description__icontains=query) |
+        Q(client__name__icontains=query) |
+        Q(client__company__icontains=query)
+    ).select_related('client')[:10]
+    
+    project_results = [{
+        'id': p.id,
+        'title': p.title,
+        'client': p.client.company if p.client else '',
+        'status': p.get_status_display(),
+        'url': reverse('projects:project-detail', kwargs={'pk': p.id})
+    } for p in projects]
+    
+    # Search clients
+    clients = Client.objects.filter(
+        Q(name__icontains=query) |
+        Q(company__icontains=query) |
+        Q(email__icontains=query)
+    )[:10]
+    
+    client_results = [{
+        'id': c.id,
+        'name': c.name,
+        'company': c.company,
+        'url': reverse('clients:client-detail', kwargs={'pk': c.id})
+    } for c in clients]
+    
+    # Search files
+    files = File.objects.filter(
+        Q(title__icontains=query) |
+        Q(description__icontains=query)
+    ).select_related('project')[:10]
+    
+    file_results = [{
+        'id': f.id,
+        'title': f.title,
+        'project': f.project.title if f.project else '',
+        'url': reverse('files:file-detail', kwargs={'pk': f.id})
+    } for f in files]
+    
+    return JsonResponse({
+        'results': {
+            'projects': project_results,
+            'clients': client_results,
+            'files': file_results
+        }
+    })
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
@@ -810,3 +934,486 @@ class ApplyCategoriesView(LoginRequiredMixin, View):
             messages.info(request, f'Updated {updated_count} existing categor{"y" if updated_count == 1 else "ies"}.')
         
         return redirect('projects:project-detail', pk=project.pk)
+
+
+# Duplicate Project View
+@login_required
+@require_POST
+def duplicate_project(request, project_id):
+    """Duplicate a project with optional copying of phases, milestones, and scope items"""
+    original_project = get_object_or_404(Project, pk=project_id)
+    
+    # Get options from POST
+    copy_phases = request.POST.get('copy_phases') == 'on'
+    copy_milestones = request.POST.get('copy_milestones') == 'on'
+    copy_scope = request.POST.get('copy_scope') == 'on'
+    new_title = request.POST.get('new_title', f"{original_project.title} (Copy)")
+    new_start_date = request.POST.get('new_start_date')
+    
+    from datetime import datetime
+    
+    # Parse new start date or use today
+    if new_start_date:
+        try:
+            start_date = datetime.strptime(new_start_date, '%Y-%m-%d').date()
+        except ValueError:
+            start_date = timezone.now().date()
+    else:
+        start_date = timezone.now().date()
+    
+    # Calculate date offset
+    date_offset = start_date - original_project.start_date
+    
+    # Create new project
+    new_project = Project.objects.create(
+        title=new_title,
+        client=original_project.client,
+        description=original_project.description,
+        start_date=start_date,
+        end_date=original_project.end_date + date_offset if original_project.end_date else None,
+        status='planning',
+        budget=original_project.budget
+    )
+    
+    # Copy phases
+    if copy_phases:
+        for phase in original_project.phases.all():
+            ProjectPhase.objects.create(
+                project=new_project,
+                name=phase.name,
+                order=phase.order,
+                percent_complete=0,
+                start_date=phase.start_date + date_offset if phase.start_date else None,
+                end_date=phase.end_date + date_offset if phase.end_date else None,
+                status='not_started'
+            )
+    
+    # Copy milestones
+    if copy_milestones:
+        for milestone in original_project.milestones.all():
+            Milestone.objects.create(
+                project=new_project,
+                name=milestone.name,
+                due_date=milestone.due_date + date_offset,
+                source='manual',
+                description=milestone.description
+            )
+    
+    # Copy scope categories
+    if copy_scope:
+        for category in original_project.scope_categories.all():
+            ProjectScopeCategory.objects.create(
+                project=new_project,
+                category_name=category.category_name,
+                confidence_score=category.confidence_score
+            )
+    
+    # Log activity
+    from .models import ActivityLog
+    ActivityLog.objects.create(
+        project=new_project,
+        user=request.user,
+        action='create',
+        description=f'Duplicated from project "{original_project.title}"',
+        object_type='Project',
+        object_id=new_project.id,
+        metadata={'source_project_id': original_project.id}
+    )
+    
+    messages.success(request, f'Successfully duplicated project as "{new_title}"')
+    return redirect('projects:project-detail', pk=new_project.pk)
+
+
+# Export Projects to Excel
+@login_required
+def export_projects_excel(request):
+    """Export project list to Excel file"""
+    import io
+    from django.http import HttpResponse
+    
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    client_filter = request.GET.get('client', '')
+    
+    # Build queryset
+    projects = Project.objects.select_related('client').prefetch_related('phases', 'milestones')
+    
+    if status_filter:
+        projects = projects.filter(status=status_filter)
+    if client_filter:
+        projects = projects.filter(client_id=client_filter)
+    
+    # Create Excel file using pandas
+    import pandas as pd
+    
+    data = []
+    for project in projects:
+        # Calculate phase completion
+        phases = project.phases.all()
+        avg_completion = sum(p.percent_complete for p in phases) / len(phases) if phases else 0
+        
+        data.append({
+            'Project Title': project.title,
+            'Client': project.client.company if project.client else '',
+            'Status': project.get_status_display(),
+            'Start Date': project.start_date,
+            'End Date': project.end_date,
+            'Budget': float(project.budget) if project.budget else 0,
+            'Completion %': round(avg_completion, 1),
+            'Total Phases': phases.count(),
+            'Total Milestones': project.milestones.count(),
+            'Created': project.created_at.strftime('%Y-%m-%d'),
+            'Updated': project.updated_at.strftime('%Y-%m-%d'),
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Create Excel file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Projects', index=False)
+    output.seek(0)
+    
+    # Create response
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.xlsx'
+    )
+    response['Content-Disposition'] = f'attachment; filename="projects_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+    
+    return response
+
+
+# Quick Time Entry
+@login_required
+@require_POST
+def quick_time_entry(request, project_id):
+    """Quick add time entry from project detail page"""
+    project = get_object_or_404(Project, pk=project_id)
+    
+    from .models import TimeEntry
+    
+    hours = request.POST.get('hours')
+    description = request.POST.get('description', '')
+    date_str = request.POST.get('date')
+    billable = request.POST.get('billable') == 'on'
+    
+    if not hours:
+        messages.error(request, 'Hours are required.')
+        return redirect('projects:project-detail', pk=project.pk)
+    
+    try:
+        hours = float(hours)
+    except ValueError:
+        messages.error(request, 'Invalid hours value.')
+        return redirect('projects:project-detail', pk=project.pk)
+    
+    # Parse date
+    from datetime import datetime
+    if date_str:
+        try:
+            entry_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            entry_date = timezone.now().date()
+    else:
+        entry_date = timezone.now().date()
+    
+    # Create time entry
+    TimeEntry.objects.create(
+        project=project,
+        user=request.user,
+        date=entry_date,
+        hours=hours,
+        description=description,
+        billable=billable
+    )
+    
+    messages.success(request, f'Added {hours} hours to project.')
+    return redirect('projects:project-detail', pk=project.pk)
+
+
+# Project Templates Views
+class ProjectTemplateListView(LoginRequiredMixin, ListView):
+    model = ProjectTemplate
+    template_name = 'projects/template_list.html'
+    context_object_name = 'templates'
+    
+    def get_queryset(self):
+        return ProjectTemplate.objects.filter(is_active=True)
+
+
+class ProjectTemplateCreateView(LoginRequiredMixin, CreateView):
+    model = ProjectTemplate
+    template_name = 'projects/template_form.html'
+    fields = ['name', 'description', 'default_phases', 'default_milestones', 
+              'default_scope_categories', 'estimated_duration_days', 'is_active']
+    success_url = reverse_lazy('projects:template-list')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Project template created successfully.')
+        return super().form_valid(form)
+
+
+class ProjectTemplateUpdateView(LoginRequiredMixin, UpdateView):
+    model = ProjectTemplate
+    template_name = 'projects/template_form.html'
+    fields = ['name', 'description', 'default_phases', 'default_milestones', 
+              'default_scope_categories', 'estimated_duration_days', 'is_active']
+    success_url = reverse_lazy('projects:template-list')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Project template updated successfully.')
+        return super().form_valid(form)
+
+
+@login_required
+@require_POST
+def apply_template_to_project(request, project_id, template_id):
+    """Apply a project template to an existing project"""
+    project = get_object_or_404(Project, pk=project_id)
+    template = get_object_or_404(ProjectTemplate, pk=template_id)
+    
+    template.apply_to_project(project)
+    
+    messages.success(request, f'Applied template "{template.name}" to project.')
+    return redirect('projects:project-detail', pk=project.pk)
+
+
+# Activity Log View
+class ActivityLogView(LoginRequiredMixin, ListView):
+    model = ActivityLog
+    template_name = 'projects/activity_log.html'
+    context_object_name = 'activities'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        project_id = self.kwargs.get('project_id')
+        if project_id:
+            return ActivityLog.objects.filter(project_id=project_id).select_related('project', 'user')
+        return ActivityLog.objects.all().select_related('project', 'user')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project_id = self.kwargs.get('project_id')
+        if project_id:
+            context['project'] = get_object_or_404(Project, pk=project_id)
+        return context
+
+
+class BudgetBurnDownView(LoginRequiredMixin, DetailView):
+    """Project budget burn-down visualization"""
+    model = Project
+    template_name = 'projects/budget_burndown.html'
+    context_object_name = 'project'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.object
+        
+        # Get budget info
+        budget = float(project.budget or 0)
+        context['budget'] = budget
+        
+        # Calculate labor costs from time entries
+        time_entries = project.time_entries.order_by('date')
+        
+        # Get staff rates for cost calculation
+        labor_data = []
+        cumulative_labor = 0
+        
+        for entry in time_entries:
+            # Try to get staff rate, default to $150/hr
+            hourly_rate = 150
+            try:
+                from resources.models import StaffMember
+                staff = StaffMember.objects.filter(user=entry.user).first()
+                if staff and staff.internal_cost_rate:
+                    hourly_rate = float(staff.internal_cost_rate)
+            except:
+                pass
+            
+            cost = float(entry.hours) * hourly_rate
+            cumulative_labor += cost
+            labor_data.append({
+                'date': entry.date.isoformat(),
+                'hours': float(entry.hours),
+                'cost': cost,
+                'cumulative': cumulative_labor,
+                'description': entry.description[:50] if entry.description else ''
+            })
+        
+        context['labor_data'] = labor_data
+        context['total_labor_cost'] = cumulative_labor
+        
+        # Get expenses
+        expense_data = []
+        cumulative_expenses = 0
+        try:
+            from billing.models import Expense
+            expenses = Expense.objects.filter(project=project, status='approved').order_by('expense_date')
+            for expense in expenses:
+                cumulative_expenses += float(expense.amount)
+                expense_data.append({
+                    'date': expense.expense_date.isoformat(),
+                    'amount': float(expense.amount),
+                    'cumulative': cumulative_expenses,
+                    'category': expense.get_category_display(),
+                    'description': expense.description[:50] if expense.description else ''
+                })
+        except:
+            pass
+        
+        context['expense_data'] = expense_data
+        context['total_expenses'] = cumulative_expenses
+        
+        # Build burn-down chart data (combines labor + expenses)
+        all_costs = []
+        
+        # Merge labor and expense data by date
+        for item in labor_data:
+            all_costs.append({
+                'date': item['date'],
+                'amount': item['cost'],
+                'type': 'labor'
+            })
+        
+        for item in expense_data:
+            all_costs.append({
+                'date': item['date'],
+                'amount': item['amount'],
+                'type': 'expense'
+            })
+        
+        # Sort by date and calculate cumulative
+        all_costs.sort(key=lambda x: x['date'])
+        
+        burn_down_data = []
+        remaining = budget
+        cumulative_spent = 0
+        
+        for cost in all_costs:
+            cumulative_spent += cost['amount']
+            remaining = budget - cumulative_spent
+            burn_down_data.append({
+                'date': cost['date'],
+                'spent': cumulative_spent,
+                'remaining': remaining,
+                'type': cost['type']
+            })
+        
+        context['burn_down_data'] = json.dumps(burn_down_data, cls=DjangoJSONEncoder)
+        context['total_spent'] = cumulative_spent
+        context['remaining_budget'] = budget - cumulative_spent
+        context['budget_percent_used'] = (cumulative_spent / budget * 100) if budget > 0 else 0
+        
+        # Budget health status
+        if budget > 0:
+            percent_used = cumulative_spent / budget * 100
+            if percent_used > 100:
+                context['budget_status'] = 'over_budget'
+                context['budget_status_class'] = 'danger'
+            elif percent_used > 90:
+                context['budget_status'] = 'critical'
+                context['budget_status_class'] = 'warning'
+            elif percent_used > 75:
+                context['budget_status'] = 'caution'
+                context['budget_status_class'] = 'info'
+            else:
+                context['budget_status'] = 'healthy'
+                context['budget_status_class'] = 'success'
+        else:
+            context['budget_status'] = 'no_budget'
+            context['budget_status_class'] = 'secondary'
+        
+        # Invoice data
+        try:
+            from billing.models import BillingDetail
+            invoices = BillingDetail.objects.filter(project=project).order_by('invoice_date')
+            invoice_data = []
+            total_invoiced = 0
+            total_paid = 0
+            
+            for inv in invoices:
+                total_invoiced += float(inv.amount)
+                if inv.status == 'paid':
+                    total_paid += float(inv.amount)
+                invoice_data.append({
+                    'number': inv.invoice_number,
+                    'date': inv.invoice_date.isoformat() if inv.invoice_date else '',
+                    'amount': float(inv.amount),
+                    'status': inv.get_status_display()
+                })
+            
+            context['invoice_data'] = invoice_data
+            context['total_invoiced'] = total_invoiced
+            context['total_paid'] = total_paid
+            context['outstanding'] = total_invoiced - total_paid
+        except:
+            context['invoice_data'] = []
+            context['total_invoiced'] = 0
+            context['total_paid'] = 0
+            context['outstanding'] = 0
+        
+        # Profitability
+        context['gross_margin'] = context['total_invoiced'] - cumulative_spent
+        if context['total_invoiced'] > 0:
+            context['margin_percent'] = (context['gross_margin'] / context['total_invoiced']) * 100
+        else:
+            context['margin_percent'] = 0
+        
+        return context
+
+
+@login_required
+def budget_burndown_api(request, project_id):
+    """API endpoint for budget burn-down data (for AJAX updates)"""
+    project = get_object_or_404(Project, pk=project_id)
+    
+    budget = float(project.budget or 0)
+    
+    # Get time entry costs
+    time_entries = project.time_entries.order_by('date')
+    cumulative_cost = 0
+    data_points = []
+    
+    for entry in time_entries:
+        hourly_rate = 150
+        try:
+            from resources.models import StaffMember
+            staff = StaffMember.objects.filter(user=entry.user).first()
+            if staff and staff.internal_cost_rate:
+                hourly_rate = float(staff.internal_cost_rate)
+        except:
+            pass
+        
+        cost = float(entry.hours) * hourly_rate
+        cumulative_cost += cost
+        data_points.append({
+            'date': entry.date.isoformat(),
+            'spent': cumulative_cost,
+            'remaining': budget - cumulative_cost
+        })
+    
+    # Add expenses
+    try:
+        from billing.models import Expense
+        expenses = Expense.objects.filter(project=project, status='approved').order_by('expense_date')
+        for expense in expenses:
+            cumulative_cost += float(expense.amount)
+            data_points.append({
+                'date': expense.expense_date.isoformat(),
+                'spent': cumulative_cost,
+                'remaining': budget - cumulative_cost
+            })
+    except:
+        pass
+    
+    # Sort by date
+    data_points.sort(key=lambda x: x['date'])
+    
+    return JsonResponse({
+        'budget': budget,
+        'total_spent': cumulative_cost,
+        'remaining': budget - cumulative_cost,
+        'data_points': data_points
+    })

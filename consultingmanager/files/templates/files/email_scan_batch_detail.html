@@ -1,0 +1,243 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ batch.name }} - Email Scanner{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'files:email-scanner-dashboard' %}">Email Scanner</a></li>
+            <li class="breadcrumb-item active">{{ batch.name|truncatechars:40 }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1>{{ batch.name }}</h1>
+            {% if batch.description %}
+            <p class="text-muted">{{ batch.description }}</p>
+            {% endif %}
+        </div>
+        <div class="btn-group">
+            {% if batch.status == 'pending' or batch.status == 'completed' %}
+            <form method="post" action="{% url 'files:run-email-scan-batch' batch.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-play-fill"></i> {% if batch.status == 'completed' %}Re-run{% else %}Run{% endif %} Scan
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'files:email-event-review-batch' batch.id %}" class="btn btn-outline-warning">
+                Review Events
+            </a>
+            <form method="post" action="{% url 'files:email-scan-batch-delete' batch.id %}" 
+                  class="d-inline" onsubmit="return confirm('Delete this scan batch and all its events?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Status and Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Status</h6>
+                    <span class="badge bg-{% if batch.status == 'completed' %}success{% elif batch.status == 'running' %}primary{% elif batch.status == 'failed' %}danger{% else %}secondary{% endif %} fs-6">
+                        {{ batch.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Emails Scanned</h6>
+                    <h3>{{ batch.total_emails_scanned|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Events Found</h6>
+                    <h3>{{ batch.total_events_found }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Milestones Created</h6>
+                    <h3>{{ batch.total_milestones_created }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Batch Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Project</th>
+                            <td>
+                                {% if batch.project %}
+                                <a href="{% url 'projects:project-detail' batch.project.id %}">
+                                    {{ batch.project.title }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">None (folder scan)</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Date Range</th>
+                            <td>
+                                {% if batch.scan_date_from or batch.scan_date_to %}
+                                {{ batch.scan_date_from|date:"M d, Y"|default:"Start" }} - 
+                                {{ batch.scan_date_to|date:"M d, Y"|default:"End" }}
+                                {% else %}
+                                <span class="text-muted">All dates</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Created</th>
+                            <td>{{ batch.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% if batch.started_at %}
+                        <tr>
+                            <th>Started</th>
+                            <td>{{ batch.started_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if batch.completed_at %}
+                        <tr>
+                            <th>Completed</th>
+                            <td>{{ batch.completed_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                    
+                    {% if batch.folder_paths %}
+                    <h6>Folder Paths</h6>
+                    <ul class="list-unstyled">
+                        {% for path in batch.folder_paths %}
+                        <li><code>{{ path }}</code></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Event Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td>Pending Review</td>
+                            <td><span class="badge bg-warning">{{ stats.pending_review }}</span></td>
+                        </tr>
+                        <tr>
+                            <td>Confirmed</td>
+                            <td><span class="badge bg-success">{{ stats.confirmed }}</span></td>
+                        </tr>
+                        <tr>
+                            <td>Converted to Milestone</td>
+                            <td><span class="badge bg-info">{{ stats.converted }}</span></td>
+                        </tr>
+                        <tr>
+                            <td>Rejected</td>
+                            <td><span class="badge bg-secondary">{{ stats.rejected }}</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            {% if batch.error_summary %}
+            <div class="card mt-3">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Errors</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0 small">{{ batch.error_summary }}</pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Events Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Extracted Events ({{ events|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if events %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Project</th>
+                        <th>Confidence</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-{% if event.event_type == 'deadline' %}danger{% elif event.event_type == 'meeting' %}info{% elif event.event_type == 'site_visit' %}success{% else %}secondary{% endif %}">
+                                {{ event.get_event_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ event.event_date|date:"M d, Y" }}</td>
+                        <td>{{ event.event_description|truncatechars:60 }}</td>
+                        <td>
+                            <a href="{% url 'projects:project-detail' event.project.id %}">
+                                {{ event.project.title|truncatechars:20 }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if event.confidence == 'high' %}success{% elif event.confidence == 'medium' %}warning{% else %}secondary{% endif %}">
+                                {{ event.confidence }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if event.status == 'converted' %}info{% elif event.status == 'confirmed' %}success{% elif event.status == 'rejected' %}secondary{% else %}warning{% endif %}">
+                                {{ event.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'files:email-event-detail' event.id %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="p-3 text-muted mb-0">No events extracted yet. Run the scan to extract timeline events.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

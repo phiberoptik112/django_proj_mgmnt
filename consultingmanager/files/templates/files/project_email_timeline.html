@@ -1,0 +1,221 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Email Timeline - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'projects:project-list' %}">Projects</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'projects:project-detail' project.id %}">{{ project.title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Email Timeline</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1>Email Timeline</h1>
+            <p class="text-muted mb-0">{{ project.title }}</p>
+        </div>
+        <div>
+            <a href="{% url 'files:quick-project-scan' project.id %}" class="btn btn-primary">
+                <i class="bi bi-search"></i> Scan Emails
+            </a>
+            <a href="{% url 'projects:project-detail' project.id %}" class="btn btn-outline-secondary">
+                Back to Project
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Inferred Phase</h6>
+                    <h4 class="text-primary">{{ current_phase|default:"Unknown" }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Events</h6>
+                    <h3>{{ event_stats.total }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Pending</h6>
+                    <h3 class="text-warning">{{ event_stats.pending }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Confirmed</h6>
+                    <h3 class="text-success">{{ event_stats.confirmed }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Milestones Created</h6>
+                    <h3 class="text-info">{{ event_stats.converted }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upcoming Events -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Upcoming Events</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if upcoming_events %}
+                    <ul class="list-group list-group-flush">
+                        {% for event in upcoming_events %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="badge bg-{% if event.event_type == 'deadline' %}danger{% elif event.event_type == 'meeting' %}info{% elif event.event_type == 'site_visit' %}success{% else %}secondary{% endif %} me-1">
+                                        {{ event.get_event_type_display }}
+                                    </span>
+                                    <strong>{{ event.event_date|date:"M d, Y" }}</strong>
+                                    <br>
+                                    <span>{{ event.event_description|truncatechars:60 }}</span>
+                                    {% if event.milestone %}
+                                    <br><small class="text-success"><i class="bi bi-flag-fill"></i> Milestone</small>
+                                    {% endif %}
+                                </div>
+                                <a href="{% url 'files:email-event-detail' event.id %}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="p-3 text-muted mb-0">No upcoming events found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Status Indicators -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Recent Status Indicators</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if indicators %}
+                    <ul class="list-group list-group-flush">
+                        {% for indicator in indicators %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="badge bg-{% if indicator.indicator_type == 'deliverable_sent' %}success{% elif indicator.indicator_type == 'waiting_on_client' %}warning{% elif indicator.indicator_type == 'on_hold' %}danger{% else %}secondary{% endif %}">
+                                        {{ indicator.get_indicator_type_display }}
+                                    </span>
+                                    <small class="text-muted ms-2">{{ indicator.indicator_date|date:"M d" }}</small>
+                                    {% if indicator.inferred_phase %}
+                                    <br><small class="text-primary">Phase: {{ indicator.inferred_phase }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="p-3 text-muted mb-0">No status indicators found. Run a scan to detect project status.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Phase Votes -->
+            {% if phase_votes %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Phase Detection</h5>
+                </div>
+                <div class="card-body">
+                    {% for phase, votes in phase_votes.items %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{{ phase }}</span>
+                        <span class="badge bg-{% if phase == current_phase %}primary{% else %}secondary{% endif %}">
+                            {{ votes }} mentions
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Past Events Timeline -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Past Events</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if past_events %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Confidence</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in past_events %}
+                    <tr>
+                        <td>{{ event.event_date|date:"M d, Y" }}</td>
+                        <td>
+                            <span class="badge bg-{% if event.event_type == 'deadline' %}danger{% elif event.event_type == 'meeting' %}info{% elif event.event_type == 'site_visit' %}success{% elif event.event_type == 'submittal' %}primary{% else %}secondary{% endif %}">
+                                {{ event.get_event_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ event.event_description|truncatechars:50 }}</td>
+                        <td>
+                            <span class="badge bg-{% if event.status == 'converted' %}info{% elif event.status == 'confirmed' %}success{% elif event.status == 'rejected' %}secondary{% else %}warning{% endif %}">
+                                {{ event.get_status_display }}
+                            </span>
+                            {% if event.milestone %}
+                            <i class="bi bi-flag-fill text-success" title="Milestone created"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if event.confidence == 'high' %}success{% elif event.confidence == 'medium' %}warning{% else %}secondary{% endif %}">
+                                {{ event.confidence }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'files:email-event-detail' event.id %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="p-3 text-muted mb-0">No past events. Run a scan to extract timeline events from emails.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

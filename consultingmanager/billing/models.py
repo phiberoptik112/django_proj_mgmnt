@@ -493,3 +493,240 @@ class BillingProgressNote(models.Model):
 
     def __str__(self):
         return f"{self.project.title} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+class Expense(models.Model):
+    """Track project expenses beyond billable hours"""
+    EXPENSE_CATEGORIES = [
+        ('travel', 'Travel'),
+        ('lodging', 'Lodging'),
+        ('meals', 'Meals'),
+        ('equipment_rental', 'Equipment Rental'),
+        ('materials', 'Materials'),
+        ('shipping', 'Shipping/Courier'),
+        ('printing', 'Printing/Reproduction'),
+        ('software', 'Software'),
+        ('subconsultant', 'Subconsultant'),
+        ('permits', 'Permits/Fees'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('invoiced', 'Invoiced to Client'),
+        ('paid', 'Paid'),
+    ]
+    
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='expenses')
+    category = models.CharField(max_length=30, choices=EXPENSE_CATEGORIES)
+    description = models.CharField(max_length=500)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Billing
+    is_billable = models.BooleanField(default=True, help_text="Can be billed to client")
+    markup_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0.00'),
+        help_text="Markup percentage when billing to client"
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Details
+    expense_date = models.DateField()
+    vendor = models.CharField(max_length=200, blank=True)
+    receipt = models.FileField(upload_to='expense_receipts/', null=True, blank=True)
+    
+    # Tracking
+    submitted_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='submitted_expenses')
+    approved_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_expenses')
+    approved_date = models.DateTimeField(null=True, blank=True)
+    
+    # Invoice reference
+    invoice = models.ForeignKey(BillingDetail, on_delete=models.SET_NULL, null=True, blank=True, related_name='expenses')
+    
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-expense_date']
+        verbose_name = "Expense"
+        verbose_name_plural = "Expenses"
+
+    def __str__(self):
+        return f"{self.project.title} - {self.get_category_display()} - ${self.amount}"
+
+    @property
+    def billable_amount(self):
+        """Amount to bill client including markup"""
+        if not self.is_billable:
+            return Decimal('0.00')
+        return self.amount * (1 + self.markup_percent / 100)
+
+
+class Contract(models.Model):
+    """Client contracts for projects"""
+    CONTRACT_TYPES = [
+        ('fixed_fee', 'Fixed Fee'),
+        ('hourly', 'Hourly/Time & Materials'),
+        ('not_to_exceed', 'Not to Exceed'),
+        ('retainer', 'Retainer'),
+        ('master_agreement', 'Master Service Agreement'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent for Signature'),
+        ('executed', 'Executed'),
+        ('amended', 'Amended'),
+        ('completed', 'Completed'),
+        ('terminated', 'Terminated'),
+    ]
+    
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='contracts')
+    contract_number = models.CharField(max_length=50, unique=True)
+    title = models.CharField(max_length=200)
+    contract_type = models.CharField(max_length=30, choices=CONTRACT_TYPES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Financial
+    contract_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    retainer_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    retainer_received = models.BooleanField(default=False)
+    
+    # Dates
+    effective_date = models.DateField()
+    expiration_date = models.DateField(null=True, blank=True)
+    execution_date = models.DateField(null=True, blank=True, help_text="Date contract was signed")
+    
+    # Documents
+    contract_file = models.FileField(upload_to='contracts/', null=True, blank=True)
+    
+    # Scope
+    scope_summary = models.TextField(blank=True, help_text="Brief summary of contracted scope")
+    
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-effective_date']
+        verbose_name = "Contract"
+        verbose_name_plural = "Contracts"
+
+    def __str__(self):
+        return f"{self.contract_number} - {self.project.title}"
+
+
+class ContractAmendment(models.Model):
+    """Amendments/change orders to contracts"""
+    AMENDMENT_TYPES = [
+        ('scope_change', 'Scope Change'),
+        ('fee_increase', 'Fee Increase'),
+        ('fee_decrease', 'Fee Decrease'),
+        ('time_extension', 'Time Extension'),
+        ('terms_change', 'Terms Change'),
+        ('other', 'Other'),
+    ]
+    
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='amendments')
+    amendment_number = models.CharField(max_length=20)
+    amendment_type = models.CharField(max_length=30, choices=AMENDMENT_TYPES)
+    
+    description = models.TextField()
+    amount_change = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text="Positive for increase, negative for decrease"
+    )
+    new_total = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text="New total contract amount after amendment"
+    )
+    
+    effective_date = models.DateField()
+    execution_date = models.DateField(null=True, blank=True)
+    
+    amendment_file = models.FileField(upload_to='contract_amendments/', null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['contract', 'amendment_number']
+        unique_together = ['contract', 'amendment_number']
+        verbose_name = "Contract Amendment"
+        verbose_name_plural = "Contract Amendments"
+
+    def __str__(self):
+        return f"{self.contract.contract_number} - Amendment {self.amendment_number}"
+
+
+class Retainer(models.Model):
+    """Track retainer balances and usage"""
+    client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='retainers')
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, null=True, blank=True, related_name='retainers')
+    
+    initial_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    current_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    # Dates
+    received_date = models.DateField()
+    expiration_date = models.DateField(null=True, blank=True)
+    
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-received_date']
+        verbose_name = "Retainer"
+        verbose_name_plural = "Retainers"
+
+    def __str__(self):
+        return f"{self.client.company} - ${self.current_balance} remaining"
+
+
+class RetainerTransaction(models.Model):
+    """Individual transactions against a retainer"""
+    TRANSACTION_TYPES = [
+        ('deposit', 'Deposit'),
+        ('drawdown', 'Drawdown'),
+        ('refund', 'Refund'),
+        ('adjustment', 'Adjustment'),
+    ]
+    
+    retainer = models.ForeignKey(Retainer, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.CharField(max_length=500)
+    
+    # Link to invoice if applicable
+    invoice = models.ForeignKey(BillingDetail, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    transaction_date = models.DateField()
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-transaction_date', '-created_at']
+        verbose_name = "Retainer Transaction"
+        verbose_name_plural = "Retainer Transactions"
+
+    def __str__(self):
+        return f"{self.retainer.client.company} - {self.get_transaction_type_display()} ${self.amount}"
+
+    def save(self, *args, **kwargs):
+        # Update retainer balance on save
+        if not self.pk:  # Only on create
+            if self.transaction_type == 'deposit':
+                self.retainer.current_balance += self.amount
+            elif self.transaction_type in ('drawdown', 'refund'):
+                self.retainer.current_balance -= self.amount
+            elif self.transaction_type == 'adjustment':
+                self.retainer.current_balance += self.amount  # Can be negative
+            self.retainer.save()
+        super().save(*args, **kwargs)

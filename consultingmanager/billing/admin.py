@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference, PIFScanBatch, PIFScanSchedule, PIFScanResult, BillingProgressNote
+from .models import (
+    BillingDetail, ProjectInformationForm, BillingPhase, BillingEmailReference, 
+    PIFScanBatch, PIFScanSchedule, PIFScanResult, BillingProgressNote,
+    Expense, Contract, ContractAmendment, Retainer, RetainerTransaction
+)
 
 class BillingPhaseInline(admin.TabularInline):
     model = BillingPhase
@@ -201,3 +205,62 @@ class BillingProgressNoteAdmin(admin.ModelAdmin):
         return obj.note_text[:100] + '...' if len(obj.note_text) > 100 else obj.note_text
 
     note_text_preview.short_description = "Note Preview"
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ['project', 'category', 'description', 'amount', 'is_billable', 'status', 'expense_date']
+    list_filter = ['category', 'status', 'is_billable', 'expense_date']
+    search_fields = ['project__title', 'description', 'vendor']
+    raw_id_fields = ['project', 'submitted_by', 'approved_by', 'invoice']
+    date_hierarchy = 'expense_date'
+
+
+class ContractAmendmentInline(admin.TabularInline):
+    model = ContractAmendment
+    extra = 0
+    fields = ['amendment_number', 'amendment_type', 'amount_change', 'new_total', 'effective_date']
+
+
+@admin.register(Contract)
+class ContractAdmin(admin.ModelAdmin):
+    list_display = ['contract_number', 'project', 'contract_type', 'contract_amount', 'status', 'effective_date']
+    list_filter = ['contract_type', 'status']
+    search_fields = ['contract_number', 'project__title', 'title']
+    raw_id_fields = ['project']
+    date_hierarchy = 'effective_date'
+    inlines = [ContractAmendmentInline]
+
+
+@admin.register(ContractAmendment)
+class ContractAmendmentAdmin(admin.ModelAdmin):
+    list_display = ['contract', 'amendment_number', 'amendment_type', 'amount_change', 'new_total', 'effective_date']
+    list_filter = ['amendment_type']
+    search_fields = ['contract__contract_number', 'description']
+    raw_id_fields = ['contract']
+
+
+class RetainerTransactionInline(admin.TabularInline):
+    model = RetainerTransaction
+    extra = 0
+    fields = ['transaction_type', 'amount', 'description', 'transaction_date']
+    readonly_fields = ['created_at']
+
+
+@admin.register(Retainer)
+class RetainerAdmin(admin.ModelAdmin):
+    list_display = ['client', 'project', 'initial_amount', 'current_balance', 'is_active', 'received_date']
+    list_filter = ['is_active']
+    search_fields = ['client__company', 'client__name', 'project__title']
+    raw_id_fields = ['client', 'project']
+    date_hierarchy = 'received_date'
+    inlines = [RetainerTransactionInline]
+
+
+@admin.register(RetainerTransaction)
+class RetainerTransactionAdmin(admin.ModelAdmin):
+    list_display = ['retainer', 'transaction_type', 'amount', 'description', 'transaction_date']
+    list_filter = ['transaction_type']
+    search_fields = ['retainer__client__company', 'description']
+    raw_id_fields = ['retainer', 'invoice', 'created_by']
+    date_hierarchy = 'transaction_date'

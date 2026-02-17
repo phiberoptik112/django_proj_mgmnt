@@ -1,0 +1,78 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Activity Log{% if project %} - {{ project.title }}{% endif %} - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-history me-2"></i>
+            {% if project %}Activity Log: {{ project.title }}{% else %}All Activity{% endif %}
+        </h2>
+        {% if project %}
+        <a href="{% url 'projects:project-detail' pk=project.pk %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Project
+        </a>
+        {% endif %}
+    </div>
+    
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            {% if activities %}
+            <div class="list-group list-group-flush">
+                {% for activity in activities %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-{% if activity.action == 'create' %}success{% elif activity.action == 'update' %}primary{% elif activity.action == 'delete' %}danger{% elif activity.action == 'status_change' %}warning{% else %}secondary{% endif %} me-2">
+                                {{ activity.get_action_display }}
+                            </span>
+                            <strong>{{ activity.description }}</strong>
+                            {% if not project %}
+                            <br>
+                            <small class="text-muted">
+                                Project: <a href="{% url 'projects:project-detail' pk=activity.project.pk %}">{{ activity.project.title }}</a>
+                            </small>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">
+                                {% if activity.user %}{{ activity.user.get_full_name|default:activity.user.username }}{% else %}System{% endif %}
+                            </small>
+                            <br>
+                            <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-history fa-3x mb-3"></i>
+                <p>No activity recorded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+            {% endif %}
+            <li class="page-item disabled">
+                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

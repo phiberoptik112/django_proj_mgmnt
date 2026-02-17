@@ -1,0 +1,19 @@
+feat: Email timeline scanner, home dashboard, billing/comm models, project templates
+
+- Email Timeline Scanner: add EmailScanBatch, ProjectStatusIndicator; scanner
+  dashboard, quick project scan, event detail/review; email_scanner and
+  email_timeline_parser utils; templates and docs (EMAIL_TIMELINE_SCANNER.md)
+- Projects: HomeDashboardView (metrics, milestones, recent files, billing
+  summary); ProjectTemplate and ActivityLog; budget burndown; template
+  list/form; global navbar search (projects, clients, files); Project
+  client FK PROTECT, end_date validation
+- Billing: Expense, Contract, Retainer, RetainerTransaction models and
+  migration; admin updates
+- Communications: EmailTemplate, EmailLog, Notification with template
+  rendering; migration
+- Files: DocumentRevision, DocumentComment; Email __str__ use project.title
+- Base/nav: Home link, default root redirect to home-dashboard; Tools
+  dropdown (Email Timeline Scanner, Resource Management); Dashboard → Analytics
+- URLs: include api and resources apps; projects and files URL additions
+- Add ROLE_BASED_PERMISSIONS.md, resources app, tests for email timeline
+  parser and models

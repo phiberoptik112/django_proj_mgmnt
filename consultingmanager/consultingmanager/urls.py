@@ -29,12 +29,14 @@ admin.site.site_title = "Consulting Manager Admin Portal"
 admin.site.index_title = "Welcome to Consulting Manager Admin"
 
 urlpatterns = [
-    path('', RedirectView.as_view(pattern_name='clients:client-list'), name='home'),
+    path('', RedirectView.as_view(pattern_name='projects:home-dashboard'), name='home'),
     path('admin/', admin.site.urls),
+    path('api/', include('api.urls')),
     path('clients/', include('clients.urls')),
     path('projects/', include('projects.urls')),
     path('files/', include('files.urls')),
     path('billing/', include('billing.urls')),
+    path('resources/', include('resources.urls')),
     path('__debug__/', include('debug_toolbar.urls')),
     # Authentication URLs
     path('login/', auth_views.LoginView.as_view(), name='login'),

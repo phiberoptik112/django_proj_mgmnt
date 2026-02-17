@@ -1,0 +1,192 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Event Detail - {{ event.event_description|truncatechars:30 }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'files:email-scanner-dashboard' %}">Email Scanner</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'files:email-event-review' %}">Review Events</a></li>
+            <li class="breadcrumb-item active">Event Detail</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-{% if event.event_type == 'deadline' %}danger{% elif event.event_type == 'meeting' %}info{% elif event.event_type == 'site_visit' %}success{% elif event.event_type == 'submittal' %}primary{% else %}secondary{% endif %} me-2">
+                            {{ event.get_event_type_display }}
+                        </span>
+                        <span class="badge bg-{% if event.confidence == 'high' %}success{% elif event.confidence == 'medium' %}warning{% else %}secondary{% endif %}">
+                            {{ event.confidence }} confidence
+                        </span>
+                    </div>
+                    <span class="badge bg-{% if event.status == 'converted' %}info{% elif event.status == 'confirmed' %}success{% elif event.status == 'rejected' %}secondary{% else %}warning{% endif %} fs-6">
+                        {{ event.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <h4>{{ event.event_description }}</h4>
+                    
+                    <table class="table table-sm mt-4">
+                        <tr>
+                            <th style="width: 150px;">Event Date</th>
+                            <td><strong>{{ event.event_date|date:"F d, Y" }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Project</th>
+                            <td>
+                                <a href="{% url 'projects:project-detail' event.project.id %}">
+                                    {{ event.project.title }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Extraction Method</th>
+                            <td>{{ event.extraction_method }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created</th>
+                            <td>{{ event.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% if event.reviewed_by %}
+                        <tr>
+                            <th>Reviewed By</th>
+                            <td>{{ event.reviewed_by.username }} on {{ event.reviewed_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if event.review_notes %}
+                        <tr>
+                            <th>Review Notes</th>
+                            <td>{{ event.review_notes }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if event.milestone %}
+                        <tr>
+                            <th>Milestone</th>
+                            <td>
+                                <a href="{% url 'projects:project-detail' event.project.id %}">
+                                    {{ event.milestone.name }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Extracted Text -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Extracted Text</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3" style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">{{ event.extracted_text }}</pre>
+                </div>
+            </div>
+
+            <!-- Source Email -->
+            {% if event.email %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Source Email</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th style="width: 100px;">From</th>
+                            <td>{{ event.email.sender }}</td>
+                        </tr>
+                        <tr>
+                            <th>Subject</th>
+                            <td>{{ event.email.subject }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date</th>
+                            <td>{{ event.email.date|date:"F d, Y H:i" }}</td>
+                        </tr>
+                    </table>
+                    
+                    {% if event.email.body %}
+                    <hr>
+                    <details>
+                        <summary>View full email body</summary>
+                        <pre class="bg-light p-3 mt-2" style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{{ event.email.body }}</pre>
+                    </details>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions Sidebar -->
+        <div class="col-md-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if event.status == 'pending' %}
+                    <form method="post" action="{% url 'files:confirm-email-event' event.id %}" class="mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <div class="mb-2">
+                            <textarea name="notes" class="form-control form-control-sm" rows="2" 
+                                      placeholder="Optional notes"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-lg"></i> Confirm Event
+                        </button>
+                    </form>
+                    
+                    <form method="post" action="{% url 'files:convert-event-to-milestone' event.id %}" class="mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="bi bi-flag"></i> Convert to Milestone
+                        </button>
+                    </form>
+                    
+                    <form method="post" action="{% url 'files:reject-email-event' event.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <div class="mb-2">
+                            <textarea name="notes" class="form-control form-control-sm" rows="2" 
+                                      placeholder="Reason for rejection"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-x-lg"></i> Reject Event
+                        </button>
+                    </form>
+                    {% elif event.status == 'confirmed' and not event.milestone %}
+                    <form method="post" action="{% url 'files:convert-event-to-milestone' event.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="bi bi-flag"></i> Convert to Milestone
+                        </button>
+                    </form>
+                    {% elif event.milestone %}
+                    <div class="alert alert-success mb-0">
+                        <i class="bi bi-check-circle"></i> This event has been converted to a milestone.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary mb-0">
+                        This event has been {{ event.get_status_display|lower }}.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'files:email-event-review' %}" class="btn btn-outline-secondary w-100">
+                        Back to Review List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

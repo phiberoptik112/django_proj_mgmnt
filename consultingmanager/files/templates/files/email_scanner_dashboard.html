@@ -1,0 +1,182 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Email Timeline Scanner - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Email Timeline Scanner</h1>
+            <p class="text-muted mb-0">Extract project timeline events from email communications</p>
+        </div>
+        <div>
+            <a href="{% url 'files:email-scan-batch-create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> New Scan Batch
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.total_batches }}</h3>
+                    <small class="text-muted">Scan Batches</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info">{{ stats.total_emails_scanned|intcomma }}</h3>
+                    <small class="text-muted">Emails Scanned</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ stats.total_events }}</h3>
+                    <small class="text-muted">Events Found</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ stats.pending_review }}</h3>
+                    <small class="text-muted">Pending Review</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ stats.converted_milestones }}</h3>
+                    <small class="text-muted">Milestones Created</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <a href="{% url 'files:email-event-review' %}" class="btn btn-outline-warning btn-sm">
+                        Review Events
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Scan Batches -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Scan Batches</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_batches %}
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Project</th>
+                                <th>Status</th>
+                                <th>Emails</th>
+                                <th>Events</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for batch in recent_batches %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'files:email-scan-batch-detail' batch.id %}">
+                                        {{ batch.name|truncatechars:30 }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if batch.project %}
+                                    <a href="{% url 'projects:project-detail' batch.project.id %}">
+                                        {{ batch.project.title|truncatechars:20 }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if batch.status == 'completed' %}success{% elif batch.status == 'running' %}primary{% elif batch.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                                        {{ batch.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ batch.total_emails_scanned }}</td>
+                                <td>{{ batch.total_events_found }}</td>
+                                <td>{{ batch.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="p-3 text-muted mb-0">No scan batches yet. Create one to get started.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Events Pending Review -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Events Pending Review</h5>
+                    {% if recent_pending %}
+                    <a href="{% url 'files:email-event-review' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_pending %}
+                    <ul class="list-group list-group-flush">
+                        {% for event in recent_pending %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="badge bg-{% if event.event_type == 'deadline' %}danger{% elif event.event_type == 'meeting' %}info{% elif event.event_type == 'site_visit' %}success{% else %}secondary{% endif %} me-1">
+                                        {{ event.get_event_type_display }}
+                                    </span>
+                                    <strong>{{ event.event_date|date:"M d" }}</strong>
+                                    <br>
+                                    <small>{{ event.event_description|truncatechars:50 }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ event.project.title|truncatechars:25 }}</small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <form method="post" action="{% url 'files:confirm-email-event' event.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-success btn-sm" title="Confirm">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'files:reject-email-event' event.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Reject">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="p-3 text-muted mb-0">No events pending review.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

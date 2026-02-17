@@ -24,4 +24,20 @@ urlpatterns = [
     path('proposals/import/<int:project_id>/', views.ProposalImportView.as_view(), name='proposal-import'),
     # PDF Processing
     path('process-pdfs/<int:project_id>/', views.BulkPdfProcessView.as_view(), name='process-pdfs'),
+    
+    # Email Timeline Scanner URLs
+    path('email-scanner/', views.email_scanner_dashboard, name='email-scanner-dashboard'),
+    path('email-scanner/batch/create/', views.email_scan_batch_create, name='email-scan-batch-create'),
+    path('email-scanner/batch/<int:batch_id>/', views.email_scan_batch_detail, name='email-scan-batch-detail'),
+    path('email-scanner/batch/<int:batch_id>/run/', views.run_email_scan_batch, name='run-email-scan-batch'),
+    path('email-scanner/batch/<int:batch_id>/delete/', views.email_scan_batch_delete, name='email-scan-batch-delete'),
+    path('email-scanner/review/', views.email_event_review, name='email-event-review'),
+    path('email-scanner/review/<int:batch_id>/', views.email_event_review, name='email-event-review-batch'),
+    path('email-scanner/event/<int:event_id>/', views.email_event_detail, name='email-event-detail'),
+    path('email-scanner/event/<int:event_id>/confirm/', views.confirm_email_event, name='confirm-email-event'),
+    path('email-scanner/event/<int:event_id>/reject/', views.reject_email_event, name='reject-email-event'),
+    path('email-scanner/event/<int:event_id>/convert/', views.convert_event_to_milestone, name='convert-event-to-milestone'),
+    path('email-scanner/bulk-action/', views.bulk_event_action, name='bulk-event-action'),
+    path('project/<int:project_id>/email-timeline/', views.project_email_timeline, name='project-email-timeline'),
+    path('project/<int:project_id>/quick-scan/', views.quick_project_scan, name='quick-project-scan'),
 ] 

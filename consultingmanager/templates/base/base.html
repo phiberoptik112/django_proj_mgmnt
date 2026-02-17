@@ -10,6 +10,55 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <style>
+        .global-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 4px 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1050;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .global-search-results.show { display: block; }
+        .search-result-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            color: #333;
+            text-decoration: none;
+            display: block;
+        }
+        .search-result-item:hover { background: #f5f5f5; }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-type {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #666;
+            margin-right: 8px;
+        }
+        .search-result-type.project { color: #0d6efd; }
+        .search-result-type.client { color: #198754; }
+        .search-result-type.file { color: #6c757d; }
+        .search-section-header {
+            padding: 8px 15px;
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .global-search-wrapper {
+            position: relative;
+            min-width: 300px;
+        }
+    </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -23,11 +72,17 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home-dashboard' %}active{% endif %}" 
+                           href="{% url 'projects:home-dashboard' %}">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.app_name == 'clients' %}active{% endif %}" 
                            href="{% url 'clients:client-list' %}">Clients</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.app_name == 'projects' %}active{% endif %}" 
+                        <a class="nav-link {% if request.resolver_match.app_name == 'projects' and request.resolver_match.url_name != 'home-dashboard' and request.resolver_match.url_name != 'project-dashboard' and request.resolver_match.url_name != 'recitem-dashboard' %}active{% endif %}" 
                            href="{% url 'projects:project-list' %}">Projects</a>
                     </li>
                     <li class="nav-item">
@@ -36,7 +91,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'project-dashboard' %}active{% endif %}" 
-                           href="{% url 'projects:project-dashboard' %}">Dashboard</a>
+                           href="{% url 'projects:project-dashboard' %}">Analytics</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'recitem-dashboard' %}active{% endif %}" 
@@ -52,7 +107,35 @@
                             <li><a class="dropdown-item" href="{% url 'billing:pif_scanner_dashboard' %}">PIF Scanner</a></li>
                         </ul>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button" data-bs-toggle="dropdown">
+                            Tools
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'files:email-scanner-dashboard' %}">Email Timeline Scanner</a></li>
+                            <li><a class="dropdown-item" href="{% url 'resources:dashboard' %}">Resource Management</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'projects:template-list' %}">Project Templates</a></li>
+                            <li><a class="dropdown-item" href="{% url 'projects:activity-log' %}">Activity Log</a></li>
+                        </ul>
+                    </li>
                 </ul>
+                
+                <!-- Global Search -->
+                <div class="global-search-wrapper mx-3">
+                    <form class="d-flex" role="search" id="globalSearchForm" autocomplete="off">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input class="form-control border-start-0" type="search" 
+                                   placeholder="Search projects, clients, files..." 
+                                   id="globalSearchInput" name="q">
+                        </div>
+                        <div class="global-search-results" id="globalSearchResults"></div>
+                    </form>
+                </div>
+                
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
@@ -98,6 +181,104 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Global Search Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('globalSearchInput');
+        const searchResults = document.getElementById('globalSearchResults');
+        const searchForm = document.getElementById('globalSearchForm');
+        let searchTimeout = null;
+        
+        if (!searchInput || !searchResults) return;
+        
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            if (searchTimeout) clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                searchResults.classList.remove('show');
+                searchResults.innerHTML = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('/projects/global-search/?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.results && (data.results.projects.length || data.results.clients.length || data.results.files.length)) {
+                            let html = '';
+                            
+                            if (data.results.projects.length) {
+                                html += '<div class="search-section-header"><i class="fas fa-folder me-2"></i>Projects</div>';
+                                data.results.projects.forEach(p => {
+                                    html += '<a href="' + p.url + '" class="search-result-item">';
+                                    html += '<span class="search-result-type project">Project</span>';
+                                    html += '<strong>' + p.title + '</strong>';
+                                    html += '<small class="text-muted ms-2">' + p.client + '</small>';
+                                    html += '</a>';
+                                });
+                            }
+                            
+                            if (data.results.clients.length) {
+                                html += '<div class="search-section-header"><i class="fas fa-building me-2"></i>Clients</div>';
+                                data.results.clients.forEach(c => {
+                                    html += '<a href="' + c.url + '" class="search-result-item">';
+                                    html += '<span class="search-result-type client">Client</span>';
+                                    html += '<strong>' + c.name + '</strong>';
+                                    html += '<small class="text-muted ms-2">' + c.company + '</small>';
+                                    html += '</a>';
+                                });
+                            }
+                            
+                            if (data.results.files.length) {
+                                html += '<div class="search-section-header"><i class="fas fa-file me-2"></i>Files</div>';
+                                data.results.files.forEach(f => {
+                                    html += '<a href="' + f.url + '" class="search-result-item">';
+                                    html += '<span class="search-result-type file">File</span>';
+                                    html += '<strong>' + f.title + '</strong>';
+                                    html += '<small class="text-muted ms-2">' + f.project + '</small>';
+                                    html += '</a>';
+                                });
+                            }
+                            
+                            searchResults.innerHTML = html;
+                            searchResults.classList.add('show');
+                        } else {
+                            searchResults.innerHTML = '<div class="search-result-item text-muted">No results found</div>';
+                            searchResults.classList.add('show');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Search error:', err);
+                        searchResults.classList.remove('show');
+                    });
+            }, 300);
+        });
+        
+        // Hide results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchForm.contains(e.target)) {
+                searchResults.classList.remove('show');
+            }
+        });
+        
+        // Prevent form submit
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+        });
+        
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                searchResults.classList.remove('show');
+                searchInput.blur();
+            }
+        });
+    });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html> 

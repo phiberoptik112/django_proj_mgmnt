@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from files.views import dashboard_project_details
 from .views import (
+    HomeDashboardView,
     ProjectListView, ProjectDetailView, ProjectCreateView, ProjectUpdateView, ProjectDeleteView, ProjectDashboardView,
     ProjectPhaseCreateView, ProjectPhaseUpdateView,
     PhaseWorkLogCreateView, PhaseWorkLogUpdateView,
@@ -9,12 +10,17 @@ from .views import (
     RecItemListView, RecItemDetailView, RecItemCreateView, RecItemUpdateView, RecItemDeleteView,
     RecItemVersionListView, RecItemVersionCreateView,
     RecItemAttributeCreateView, RecItemAttributeUpdateView, RecItemAttributeDeleteView,
-    RecItemDashboardView
+    RecItemDashboardView,
+    ProjectTemplateListView, ProjectTemplateCreateView, ProjectTemplateUpdateView,
+    ActivityLogView,
+    BudgetBurnDownView,
 )
 
 app_name = 'projects'
 
 urlpatterns = [
+    path('home/', HomeDashboardView.as_view(), name='home-dashboard'),
+    path('global-search/', views.global_search, name='global-search'),
     path('', views.ProjectListView.as_view(), name='project-list'),
     path('create/', views.ProjectCreateView.as_view(), name='project-create'),
     path('<int:pk>/', views.ProjectDetailView.as_view(), name='project-detail'),
@@ -55,4 +61,27 @@ urlpatterns = [
     path('<int:project_id>/scan-proposal/', views.ProposalScanView.as_view(), name='proposal-scan'),
     path('proposal-scan-result/<int:pk>/', views.ProposalScanResultView.as_view(), name='proposal-scan-result'),
     path('proposal-scan-result/<int:scan_result_id>/apply-categories/', views.ApplyCategoriesView.as_view(), name='apply-categories'),
+    
+    # Duplicate Project
+    path('<int:project_id>/duplicate/', views.duplicate_project, name='duplicate-project'),
+    
+    # Export
+    path('export/excel/', views.export_projects_excel, name='export-excel'),
+    
+    # Quick Time Entry
+    path('<int:project_id>/quick-time-entry/', views.quick_time_entry, name='quick-time-entry'),
+    
+    # Project Templates
+    path('templates/', ProjectTemplateListView.as_view(), name='template-list'),
+    path('templates/create/', ProjectTemplateCreateView.as_view(), name='template-create'),
+    path('templates/<int:pk>/edit/', ProjectTemplateUpdateView.as_view(), name='template-update'),
+    path('<int:project_id>/apply-template/<int:template_id>/', views.apply_template_to_project, name='apply-template'),
+    
+    # Activity Log
+    path('activity-log/', ActivityLogView.as_view(), name='activity-log'),
+    path('<int:project_id>/activity-log/', ActivityLogView.as_view(), name='project-activity-log'),
+    
+    # Budget Burn-Down
+    path('<int:pk>/budget/', BudgetBurnDownView.as_view(), name='budget-burndown'),
+    path('<int:project_id>/budget/api/', views.budget_burndown_api, name='budget-burndown-api'),
 ] 

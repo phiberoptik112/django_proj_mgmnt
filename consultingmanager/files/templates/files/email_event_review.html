@@ -1,0 +1,222 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Review Email Events - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Review Timeline Events</h1>
+            <p class="text-muted mb-0">{{ page_obj.paginator.count }} events pending review</p>
+        </div>
+        <a href="{% url 'files:email-scanner-dashboard' %}" class="btn btn-outline-secondary">
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Project</label>
+                    <select name="project" class="form-select">
+                        <option value="">All Projects</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if filters.project == project.id|stringformat:"s" %}selected{% endif %}>
+                            {{ project.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Event Type</label>
+                    <select name="event_type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for value, label in event_types %}
+                        <option value="{{ value }}" {% if filters.event_type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Confidence</label>
+                    <select name="confidence" class="form-select">
+                        <option value="">All Confidence</option>
+                        {% for value, label in confidence_levels %}
+                        <option value="{{ value }}" {% if filters.confidence == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Filter</button>
+                    <a href="{% url 'files:email-event-review' %}" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <form method="post" action="{% url 'files:bulk-event-action' %}" id="bulk-form">
+        {% csrf_token %}
+        
+        <div class="card mb-3">
+            <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                <div>
+                    <input type="checkbox" id="select-all" class="form-check-input me-2">
+                    <label for="select-all" class="form-check-label">Select All</label>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" name="action" value="confirm" class="btn btn-sm btn-success">
+                        Confirm Selected
+                    </button>
+                    <button type="submit" name="action" value="convert" class="btn btn-sm btn-info">
+                        Convert to Milestones
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">
+                        Reject Selected
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Events List -->
+        {% if page_obj %}
+        <div class="row">
+            {% for event in page_obj %}
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <div>
+                            <input type="checkbox" name="event_ids" value="{{ event.id }}" 
+                                   class="form-check-input event-checkbox me-2">
+                            <span class="badge bg-{% if event.event_type == 'deadline' %}danger{% elif event.event_type == 'meeting' %}info{% elif event.event_type == 'site_visit' %}success{% elif event.event_type == 'submittal' %}primary{% else %}secondary{% endif %}">
+                                {{ event.get_event_type_display }}
+                            </span>
+                            <span class="badge bg-{% if event.confidence == 'high' %}success{% elif event.confidence == 'medium' %}warning{% else %}secondary{% endif %}">
+                                {{ event.confidence }}
+                            </span>
+                        </div>
+                        <strong>{{ event.event_date|date:"M d, Y" }}</strong>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">{{ event.event_description|truncatechars:100 }}</h6>
+                        <p class="card-text small text-muted mb-2">
+                            <strong>Project:</strong> 
+                            <a href="{% url 'projects:project-detail' event.project.id %}">
+                                {{ event.project.title }}
+                            </a>
+                        </p>
+                        {% if event.email %}
+                        <p class="card-text small text-muted mb-2">
+                            <strong>From Email:</strong> {{ event.email.subject|truncatechars:50 }}
+                            <br>
+                            <strong>Email Date:</strong> {{ event.email.date|date:"M d, Y" }}
+                        </p>
+                        {% endif %}
+                        <details class="mb-2">
+                            <summary class="small text-muted">View extracted text</summary>
+                            <pre class="small bg-light p-2 mt-2" style="max-height: 150px; overflow-y: auto;">{{ event.extracted_text|truncatechars:500 }}</pre>
+                        </details>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <a href="{% url 'files:email-event-detail' event.id %}" class="btn btn-sm btn-outline-primary">
+                            Details
+                        </a>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-success" 
+                                    onclick="confirmEvent({{ event.id }})">
+                                Confirm
+                            </button>
+                            <button type="button" class="btn btn-sm btn-info"
+                                    onclick="convertEvent({{ event.id }})">
+                                Convert
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger"
+                                    onclick="rejectEvent({{ event.id }})">
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle"></i> No events pending review. Great job!
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filters.project %}&project={{ filters.project }}{% endif %}{% if filters.event_type %}&event_type={{ filters.event_type }}{% endif %}{% if filters.confidence %}&confidence={{ filters.confidence }}{% endif %}">
+                    Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            <li class="page-item disabled">
+                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filters.project %}&project={{ filters.project }}{% endif %}{% if filters.event_type %}&event_type={{ filters.event_type }}{% endif %}{% if filters.confidence %}&confidence={{ filters.confidence }}{% endif %}">
+                    Next
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Hidden forms for individual actions -->
+<form id="confirm-form" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+<form id="reject-form" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+<form id="convert-form" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+// Select all checkbox
+document.getElementById('select-all').addEventListener('change', function() {
+    document.querySelectorAll('.event-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+});
+
+// Individual action functions
+function confirmEvent(eventId) {
+    const form = document.getElementById('confirm-form');
+    form.action = '{% url "files:confirm-email-event" 0 %}'.replace('0', eventId);
+    form.submit();
+}
+
+function rejectEvent(eventId) {
+    const form = document.getElementById('reject-form');
+    form.action = '{% url "files:reject-email-event" 0 %}'.replace('0', eventId);
+    form.submit();
+}
+
+function convertEvent(eventId) {
+    const form = document.getElementById('convert-form');
+    form.action = '{% url "files:convert-event-to-milestone" 0 %}'.replace('0', eventId);
+    form.submit();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Email Scan Batch - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create Email Scan Batch</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Batch Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="e.g., January 2024 Email Scan">
+                            <div class="form-text">Leave blank for auto-generated name</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="2"
+                                      placeholder="Optional description of this scan batch"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="project" class="form-label">Project</label>
+                            <select class="form-select" id="project" name="project">
+                                <option value="">-- Select a project (or leave blank for folder scan) --</option>
+                                {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.title }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Select a project to scan emails already imported into the database for that project.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3" id="folder-paths-section">
+                            <label for="folder_paths" class="form-label">Folder Paths</label>
+                            <textarea class="form-control" id="folder_paths" name="folder_paths" rows="3"
+                                      placeholder="/Volumes/PROJECTS/2024/Project Name/Correspondence"></textarea>
+                            <div class="form-text">
+                                Enter folder paths to scan for .msg files (one per line). 
+                                Only used if no project is selected.
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="scan_date_from" class="form-label">Scan Emails From</label>
+                                <input type="date" class="form-control" id="scan_date_from" name="scan_date_from">
+                                <div class="form-text">Optional: Only scan emails after this date</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="scan_date_to" class="form-label">Scan Emails To</label>
+                                <input type="date" class="form-control" id="scan_date_to" name="scan_date_to">
+                                <div class="form-text">Optional: Only scan emails before this date</div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <strong>How it works:</strong>
+                            <ul class="mb-0">
+                                <li>If you select a project, the scanner will analyze emails already in the database for that project</li>
+                                <li>The scanner extracts dates, deadlines, meetings, and other timeline events from email content</li>
+                                <li>Extracted events are queued for your review before becoming milestones</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'files:email-scanner-dashboard' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Create Batch
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('project').addEventListener('change', function() {
+    const folderSection = document.getElementById('folder-paths-section');
+    if (this.value) {
+        folderSection.style.display = 'none';
+    } else {
+        folderSection.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}
