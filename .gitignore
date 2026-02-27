@@ -43,5 +43,8 @@ media/
 # IDE specific files
 .idea/
 .vscode/
+.cursor/
+.cursorrules/
+.claude/
 *.swp
 *.swo 
