@@ -1,0 +1,396 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Review Extracted PIF Data - Consulting Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Confidence indicator styles */
+    .confidence-high {
+        border-left: 4px solid #28a745 !important;
+    }
+    .confidence-medium {
+        border-left: 4px solid #ffc107 !important;
+    }
+    .confidence-low {
+        border-left: 4px solid #dc3545 !important;
+    }
+
+    .confidence-legend {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .confidence-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .confidence-bar {
+        width: 40px;
+        height: 20px;
+        border-radius: 0.25rem;
+    }
+
+    .stats-card {
+        position: sticky;
+        top: 20px;
+    }
+
+    .field-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .field-section:last-child {
+        border-bottom: none;
+    }
+
+    .section-header {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main Form Column -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Review Extracted PIF Data</h5>
+                    <p class="text-muted mb-0">Review and edit the extracted fields. Fields are color-coded by confidence.</p>
+                </div>
+                <div class="card-body">
+                    <!-- Confidence Legend -->
+                    <div class="confidence-legend">
+                        <div class="confidence-legend-item">
+                            <div class="confidence-bar" style="background-color: #28a745;"></div>
+                            <span><strong>High Confidence</strong> (&ge; 70%)</span>
+                        </div>
+                        <div class="confidence-legend-item">
+                            <div class="confidence-bar" style="background-color: #ffc107;"></div>
+                            <span><strong>Medium Confidence</strong> (40-69%)</span>
+                        </div>
+                        <div class="confidence-legend-item">
+                            <div class="confidence-bar" style="background-color: #dc3545;"></div>
+                            <span><strong>Low/Missing</strong> (&lt; 40%)</span>
+                        </div>
+                    </div>
+
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Project Identification Section -->
+                        <div class="field-section">
+                            <h6 class="section-header">
+                                <i class="bi bi-clipboard-data"></i> Project Identification
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.project_number.id_for_label }}" class="form-label">
+                                        Project Number
+                                    </label>
+                                    {{ form.project_number }}
+                                    {% if form.project_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.project_number.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.project_name.id_for_label }}" class="form-label">
+                                        Project Name
+                                    </label>
+                                    {{ form.project_name }}
+                                    {% if form.project_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.project_name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.dlaa_office.id_for_label }}" class="form-label">
+                                        DLAA Office
+                                    </label>
+                                    {{ form.dlaa_office }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.project_location_city.id_for_label }}" class="form-label">
+                                        City
+                                    </label>
+                                    {{ form.project_location_city }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.project_location_state.id_for_label }}" class="form-label">
+                                        State
+                                    </label>
+                                    {{ form.project_location_state }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.originator.id_for_label }}" class="form-label">
+                                        Originator
+                                    </label>
+                                    {{ form.originator }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.date_entered.id_for_label }}" class="form-label">
+                                        Date Entered
+                                    </label>
+                                    {{ form.date_entered }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Client Information Section -->
+                        <div class="field-section">
+                            <h6 class="section-header">
+                                <i class="bi bi-building"></i> Client Information
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.client_name.id_for_label }}" class="form-label">
+                                        Client Name
+                                    </label>
+                                    {{ form.client_name }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.billing_contact.id_for_label }}" class="form-label">
+                                        Billing Contact
+                                    </label>
+                                    {{ form.billing_contact }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.billing_contact_email.id_for_label }}" class="form-label">
+                                        Billing Contact Email
+                                    </label>
+                                    {{ form.billing_contact_email }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                        Phone
+                                    </label>
+                                    {{ form.phone }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.secondary_contact.id_for_label }}" class="form-label">
+                                        Secondary Contact
+                                    </label>
+                                    {{ form.secondary_contact }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.secondary_contact_email.id_for_label }}" class="form-label">
+                                        Secondary Contact Email
+                                    </label>
+                                    {{ form.secondary_contact_email }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.client_project_name.id_for_label }}" class="form-label">
+                                        Client Project Name
+                                    </label>
+                                    {{ form.client_project_name }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.purchase_order_number.id_for_label }}" class="form-label">
+                                        Purchase Order Number
+                                    </label>
+                                    {{ form.purchase_order_number }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Project Management Section -->
+                        <div class="field-section">
+                            <h6 class="section-header">
+                                <i class="bi bi-person-badge"></i> Project Management
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.project_manager.id_for_label }}" class="form-label">
+                                        Project Manager
+                                    </label>
+                                    {{ form.project_manager }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.project_start_date.id_for_label }}" class="form-label">
+                                        Project Start Date
+                                    </label>
+                                    {{ form.project_start_date }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.fee_contract_amount.id_for_label }}" class="form-label">
+                                        Fee (Contract Amount)
+                                    </label>
+                                    {{ form.fee_contract_amount }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.type_of_contract.id_for_label }}" class="form-label">
+                                        Type of Contract
+                                    </label>
+                                    {{ form.type_of_contract }}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.expenses.id_for_label }}" class="form-label">
+                                        Expenses
+                                    </label>
+                                    {{ form.expenses }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special Tax Requirements Section -->
+                        <div class="field-section">
+                            <h6 class="section-header">
+                                <i class="bi bi-geo-alt"></i> Special Tax Requirements
+                            </h6>
+                            <div class="mb-3">
+                                <label class="form-label">Tax Locations</label>
+                                {{ form.tax_locations }}
+                            </div>
+                        </div>
+
+                        <!-- Special Billing Information Section -->
+                        <div class="field-section">
+                            <h6 class="section-header">
+                                <i class="bi bi-file-earmark-text"></i> Special Billing Information
+                            </h6>
+                            <div class="mb-3">
+                                <label for="{{ form.special_negotiated_rates.id_for_label }}" class="form-label">
+                                    Special Negotiated Rates
+                                </label>
+                                {{ form.special_negotiated_rates }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.special_invoice_instructions.id_for_label }}" class="form-label">
+                                    Special Invoice Instructions
+                                </label>
+                                {{ form.special_invoice_instructions }}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.retainer_received.id_for_label }}" class="form-label">
+                                        Retainer Received
+                                    </label>
+                                    {{ form.retainer_received }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.additional_comments.id_for_label }}" class="form-label">
+                                    Additional Comments
+                                </label>
+                                {{ form.additional_comments }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'billing:pif_generate_upload' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Generate PIF
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Sidebar -->
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0"><i class="bi bi-graph-up"></i> Extraction Stats</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Completion Progress -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Completion</span>
+                            <strong>{{ stats.completion_pct }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                 style="width: {{ stats.completion_pct }}%"
+                                 aria-valuenow="{{ stats.completion_pct }}"
+                                 aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Field Count -->
+                    <div class="mb-3">
+                        <div class="text-muted mb-1">Filled Fields</div>
+                        <h4 class="mb-0">{{ stats.filled_fields }} / {{ stats.total_fields }}</h4>
+                    </div>
+
+                    <!-- Confidence Breakdown -->
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-success">
+                                <i class="bi bi-check-circle-fill"></i> High Confidence
+                            </span>
+                            <strong>{{ stats.high_confidence_count }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-warning">
+                                <i class="bi bi-exclamation-circle-fill"></i> Medium Confidence
+                            </span>
+                            <strong>{{ stats.medium_confidence_count }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-danger">
+                                <i class="bi bi-x-circle-fill"></i> Low Confidence
+                            </span>
+                            <strong>{{ stats.low_confidence_count }}</strong>
+                        </div>
+                    </div>
+
+                    {% if stats.low_confidence_count > 0 %}
+                    <div class="alert alert-warning py-2 px-3">
+                        <small>
+                            <i class="bi bi-info-circle"></i>
+                            Please review {{ stats.low_confidence_count }} low-confidence field{{ stats.low_confidence_count|pluralize }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

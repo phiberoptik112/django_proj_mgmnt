@@ -37,4 +37,10 @@ urlpatterns = [
     path('pif-scanner/schedule/<int:schedule_id>/toggle/', views.toggle_pif_scan_schedule, name='toggle_pif_scan_schedule'),
     path('pif-scanner/import-csv/', views.import_pif_scan_csv, name='import_pif_scan_csv'),
     path('pif-scanner/api/project-search/', views.pif_project_search, name='pif_project_search'),
+    path('pif-upload/', views.upload_single_pif, name='upload_single_pif'),
+
+    # PIF Generator URLs
+    path('pif-generate/upload/', views.pif_generate_upload, name='pif_generate_upload'),
+    path('pif-generate/review/', views.pif_generate_review, name='pif_generate_review'),
+    path('pif-generate/confirm/', views.pif_generate_confirm, name='pif_generate_confirm'),
 ]

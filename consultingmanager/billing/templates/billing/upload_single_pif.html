@@ -1,0 +1,192 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Upload PIF - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Upload Project Information Form (PIF)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Upload a PIF Excel file and link it to an existing project or create a new one.
+                    </p>
+
+                    <form method="post" enctype="multipart/form-data" id="pifUploadForm">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- PIF File Upload -->
+                        <div class="mb-4">
+                            <label for="{{ form.pif_file.id_for_label }}" class="form-label">
+                                <strong>PIF File</strong>
+                            </label>
+                            <input type="file"
+                                   class="form-control {% if form.pif_file.errors %}is-invalid{% endif %}"
+                                   id="{{ form.pif_file.id_for_label }}"
+                                   name="{{ form.pif_file.name }}"
+                                   accept=".xlsx,.xls"
+                                   required>
+                            {% if form.pif_file.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.pif_file.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Upload a PIF Excel file (.xlsx or .xls format, max 10MB)</div>
+                        </div>
+
+                        <!-- Project Selection -->
+                        <div class="mb-4">
+                            <label class="form-label"><strong>Project Association</strong></label>
+
+                            <div class="card">
+                                <div class="card-body">
+                                    <!-- Option 1: Link to existing project -->
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                   type="radio"
+                                                   name="project_option"
+                                                   id="existingProjectOption"
+                                                   value="existing"
+                                                   checked>
+                                            <label class="form-check-label" for="existingProjectOption">
+                                                Link to existing project
+                                            </label>
+                                        </div>
+                                        <div class="mt-2 ms-4" id="existingProjectSelect">
+                                            <select class="form-select {% if form.project.errors %}is-invalid{% endif %}"
+                                                    id="{{ form.project.id_for_label }}"
+                                                    name="{{ form.project.name }}">
+                                                <option value="">-- Select Project --</option>
+                                                {% for project in form.fields.project.queryset %}
+                                                <option value="{{ project.id }}">
+                                                    {{ project.title }} ({{ project.client.company }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            {% if form.project.errors %}
+                                            <div class="invalid-feedback">
+                                                {% for error in form.project.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Option 2: Create new project -->
+                                    <div>
+                                        <div class="form-check">
+                                            <input class="form-check-input {% if form.create_new_project.errors %}is-invalid{% endif %}"
+                                                   type="radio"
+                                                   name="project_option"
+                                                   id="newProjectOption"
+                                                   value="new">
+                                            <label class="form-check-label" for="newProjectOption">
+                                                Create new project from PIF data
+                                            </label>
+                                            <input type="hidden"
+                                                   id="{{ form.create_new_project.id_for_label }}"
+                                                   name="{{ form.create_new_project.name }}"
+                                                   value="false">
+                                        </div>
+                                        <div class="mt-2 ms-4">
+                                            <small class="text-muted">
+                                                A new project will be created using project name, client, and other data extracted from the PIF file.
+                                                If a client is not found, a new client will also be created.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'projects:home_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Upload and Process PIF
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        How It Works
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li><strong>Upload PIF:</strong> Select a PIF Excel file from your computer</li>
+                        <li><strong>Choose Project:</strong> Either link to an existing project or create a new one</li>
+                        <li><strong>Auto-Extract:</strong> The system will automatically extract project information from the PIF</li>
+                        <li><strong>Review & Edit:</strong> You'll be redirected to review and complete the extracted information</li>
+                    </ol>
+
+                    <div class="alert alert-info mb-0">
+                        <strong>Note:</strong> The PIF file should be in standard Excel format (.xlsx or .xls).
+                        The system will attempt to automatically extract fields like project number, client name,
+                        billing contact, contract amount, and more. If data is missing or parsing fails, placeholder
+                        values will be used and you can edit them afterwards.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const existingOption = document.getElementById('existingProjectOption');
+    const newOption = document.getElementById('newProjectOption');
+    const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
+    const createNewHidden = document.getElementById('{{ form.create_new_project.id_for_label }}');
+    const existingProjectDiv = document.getElementById('existingProjectSelect');
+
+    function updateFormState() {
+        if (newOption.checked) {
+            projectSelect.disabled = true;
+            projectSelect.value = '';
+            createNewHidden.value = 'true';
+            existingProjectDiv.style.opacity = '0.5';
+        } else {
+            projectSelect.disabled = false;
+            createNewHidden.value = 'false';
+            existingProjectDiv.style.opacity = '1';
+        }
+    }
+
+    existingOption.addEventListener('change', updateFormState);
+    newOption.addEventListener('change', updateFormState);
+
+    // Initialize
+    updateFormState();
+});
+</script>
+{% endblock %}

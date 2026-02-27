@@ -4,6 +4,7 @@ from .models import ProjectInformationForm, BillingPhase
 from clients.models import Client
 from .models import PIFScanBatch, PIFScanSchedule
 from projects.models import Project
+import os
 
 class ProjectInformationFormForm(forms.ModelForm):
     """Form for Project Information Form data entry"""
@@ -188,11 +189,11 @@ class PIFScanScheduleForm(forms.ModelForm):
         return []
 
 class PIFScanCSVImportForm(forms.Form):
-    """Form for importing PIF scan results from CSV"""
+    """Form for importing PIF scan results from CSV or Excel"""
     csv_file = forms.FileField(
-        label='PIF Scan Results CSV',
-        help_text='Upload a CSV file with PIF scan results',
-        widget=forms.FileInput(attrs={'accept': '.csv', 'class': 'form-control'})
+        label='PIF Scan Results File',
+        help_text='Upload a CSV (.csv) or Excel (.xlsx) file with PIF scan results',
+        widget=forms.FileInput(attrs={'accept': '.csv,.xlsx', 'class': 'form-control'})
     )
     batch_name = forms.CharField(
         label='Batch Name',
@@ -217,10 +218,16 @@ class PIFScanCSVImportForm(forms.Form):
     def clean_csv_file(self):
         file = self.cleaned_data.get('csv_file')
         if file:
-            if not file.name.endswith('.csv'):
-                raise forms.ValidationError('Only CSV files are allowed.')
+            # Accept both .csv and .xlsx files
+            allowed_extensions = ['.csv', '.xlsx']
+            file_ext = os.path.splitext(file.name)[1].lower()
+
+            if file_ext not in allowed_extensions:
+                raise forms.ValidationError('Only CSV (.csv) and Excel (.xlsx) files are allowed.')
+
             if file.size > 10 * 1024 * 1024:  # 10MB limit
                 raise forms.ValidationError('File size must be less than 10MB.')
+
         return file
 
 
@@ -335,3 +342,256 @@ class CreateClientAndProjectFromScanForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         label='Budget (optional)'
     )
+
+
+class SinglePIFUploadForm(forms.Form):
+    """Form for uploading a single PIF Excel file from home dashboard"""
+    pif_file = forms.FileField(
+        label='PIF File',
+        help_text='Upload a PIF Excel file (.xlsx or .xls)',
+        widget=forms.FileInput(attrs={'accept': '.xlsx,.xls', 'class': 'form-control'})
+    )
+    project = forms.ModelChoiceField(
+        queryset=Project.objects.all().order_by('-created_at'),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Link to Existing Project',
+        help_text='Select an existing project or leave blank to create a new one'
+    )
+    create_new_project = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label='Create new project from PIF data',
+        help_text='If checked, a new project will be created using data from the PIF'
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pif_file = cleaned_data.get('pif_file')
+        project = cleaned_data.get('project')
+        create_new = cleaned_data.get('create_new_project')
+
+        # Validate file extension
+        if pif_file:
+            file_ext = os.path.splitext(pif_file.name)[1].lower()
+            if file_ext not in ['.xlsx', '.xls']:
+                raise forms.ValidationError('Only Excel files (.xlsx, .xls) are allowed.')
+
+            if pif_file.size > 10 * 1024 * 1024:  # 10MB limit
+                raise forms.ValidationError('File size must be less than 10MB.')
+
+        # Must select project OR choose to create new
+        if not project and not create_new:
+            raise forms.ValidationError('Please select an existing project or check "Create new project".')
+
+        # Cannot do both
+        if project and create_new:
+            raise forms.ValidationError('Please either select an existing project OR create a new one, not both.')
+
+        return cleaned_data
+
+
+class PIFGeneratorUploadForm(forms.Form):
+    """Form for uploading proposal file to generate PIF"""
+    proposal_file = forms.FileField(
+        label='Proposal File',
+        help_text='Upload .doc, .docx, or .txt proposal file',
+        widget=forms.FileInput(attrs={
+            'accept': '.doc,.docx,.txt',
+            'class': 'form-control'
+        })
+    )
+    project = forms.ModelChoiceField(
+        queryset=Project.objects.all().order_by('-created_at'),
+        required=False,
+        label='Link to Existing Project (Optional)',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Select an existing project to link this PIF to, or leave blank to create a new one'
+    )
+
+    def clean_proposal_file(self):
+        file = self.cleaned_data.get('proposal_file')
+        if file:
+            # Validate file extension
+            allowed_extensions = ['.doc', '.docx', '.txt']
+            file_ext = os.path.splitext(file.name)[1].lower()
+
+            if file_ext not in allowed_extensions:
+                raise forms.ValidationError('Only .doc, .docx, and .txt files are allowed.')
+
+            if file.size > 10 * 1024 * 1024:  # 10MB limit
+                raise forms.ValidationError('File size must be less than 10MB.')
+
+        return file
+
+
+class PIFGeneratorReviewForm(forms.Form):
+    """Form for reviewing and editing extracted PIF fields"""
+
+    # Project Identification
+    project_number = forms.CharField(
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 24-001'})
+    )
+    project_name = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    dlaa_office = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    project_location_city = forms.CharField(
+        max_length=100,
+        required=False,
+        label='City',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    project_location_state = forms.CharField(
+        max_length=50,
+        required=False,
+        label='State',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., HI'})
+    )
+    originator = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    date_entered = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+
+    # Client Information
+    client_name = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    billing_contact = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    billing_contact_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
+    phone = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(808) 555-1234'})
+    )
+    secondary_contact = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    secondary_contact_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
+    client_project_name = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    purchase_order_number = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
+    # Project Management
+    project_manager = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    project_start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    fee_contract_amount = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    type_of_contract = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Lump Sum'})
+    )
+    expenses = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+
+    # Special Tax Requirements
+    tax_locations = forms.MultipleChoiceField(
+        choices=[
+            ('hawaii', 'Hawaii'),
+            ('oahu', 'Oahu'),
+            ('maui', 'Maui'),
+            ('kauai', 'Kauai'),
+            ('japan', 'Japan'),
+            ('south_korea', 'South Korea'),
+            ('guam', 'Guam'),
+            ('singapore', 'Singapore'),
+        ],
+        required=False,
+        widget=forms.CheckboxSelectMultiple()
+    )
+
+    # Special Billing Information
+    special_negotiated_rates = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+    )
+    special_invoice_instructions = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+    )
+    retainer_received = forms.ChoiceField(
+        choices=[('', '---'), ('yes', 'Yes'), ('no', 'No')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    additional_comments = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+    )
+
+    def __init__(self, *args, extracted_data=None, confidence_scores=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Pre-fill from extracted_data
+        if extracted_data:
+            for field, value in extracted_data.items():
+                if field in self.fields:
+                    self.fields[field].initial = value
+
+        # Add confidence as widget attributes for CSS styling
+        if confidence_scores:
+            for field, confidence in confidence_scores.items():
+                if field in self.fields:
+                    self.fields[field].widget.attrs['data-confidence'] = f'{confidence:.2f}'
+
+                    # Add CSS class based on confidence
+                    existing_class = self.fields[field].widget.attrs.get('class', '')
+                    if confidence >= 0.7:
+                        css_class = 'confidence-high'
+                    elif confidence >= 0.4:
+                        css_class = 'confidence-medium'
+                    else:
+                        css_class = 'confidence-low'
+
+                    self.fields[field].widget.attrs['class'] = f'{existing_class} {css_class}'.strip()

@@ -8,9 +8,17 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 import json
 from decimal import Decimal
 from django.core.paginator import Paginator
+import pandas as pd
+import os
+import math
+import tempfile
+import logging
+
+logger = logging.getLogger(__name__)
 
 from projects.models import Project, TimeEntry
 from clients.models import Client
@@ -24,9 +32,12 @@ from .forms import (
     PIFScanBatchForm,
     PIFScanScheduleForm,
     PIFScanCSVImportForm,
+    SinglePIFUploadForm,
     LinkExistingProjectForm,
     CreateProjectFromScanForm,
     CreateClientAndProjectFromScanForm,
+    PIFGeneratorUploadForm,
+    PIFGeneratorReviewForm,
 )
 from .utils.pif_parser import parse_pif_excel
 from .utils.volume_access import (
@@ -1187,7 +1198,7 @@ def toggle_pif_scan_schedule(request, schedule_id):
 
 @staff_member_required
 def import_pif_scan_csv(request):
-    """Import PIF scan results from CSV file"""
+    """Import PIF scan results from CSV or Excel file"""
     if request.method == 'POST':
         form = PIFScanCSVImportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -1195,86 +1206,143 @@ def import_pif_scan_csv(request):
             batch_name = form.cleaned_data['batch_name']
             description = form.cleaned_data['description']
             update_existing = form.cleaned_data['update_existing']
-            
+
+            # Helper function for safe integer conversion (Bug Fix #3)
+            def safe_int(value, default=None):
+                """Safely convert value to int, returning default if conversion fails"""
+                if not value or str(value).strip() == '':
+                    return default
+                try:
+                    return int(value)
+                except (ValueError, TypeError):
+                    return default
+
             try:
-                # Create batch
-                batch = PIFScanBatch.objects.create(
-                    name=batch_name,
-                    description=description,
-                    status='completed'
-                )
-                
-                # Import CSV data
-                import csv
-                import io
-                
-                csv_content = csv_file.read().decode('utf-8')
-                csv_reader = csv.DictReader(io.StringIO(csv_content))
-                
-                imported_count = 0
-                for row in csv_reader:
-                    # Check if result already exists
-                    existing = None
-                    if update_existing:
-                        existing = PIFScanResult.objects.filter(
-                            container_dir=row.get('container_dir', ''),
-                            scan_batch__name=batch_name
-                        ).first()
-                    
-                    if existing and update_existing:
-                        # Update existing
-                        existing.status = row.get('status', 'skipped')
-                        existing.reason = row.get('reason', '')
-                        existing.pif_file = row.get('pif_file', '')
-                        existing.files_count = int(row.get('files_count', 0)) if row.get('files_count') else None
-                        existing.rows = int(row.get('rows', 0)) if row.get('rows') else None
-                        existing.save()
+                # Wrap entire import in transaction for atomicity (Bug Fix #6)
+                with transaction.atomic():
+                    # Create batch
+                    batch = PIFScanBatch.objects.create(
+                        name=batch_name,
+                        description=description,
+                        status='completed'
+                    )
+
+                    # Determine file type and read data
+                    file_ext = os.path.splitext(csv_file.name)[1].lower()
+
+                    if file_ext == '.xlsx':
+                        # Read Excel file
+                        try:
+                            df = pd.read_excel(csv_file, engine='openpyxl')
+                            rows = df.to_dict('records')
+                            # Handle NaN values
+                            for row in rows:
+                                for key, value in row.items():
+                                    if isinstance(value, float) and math.isnan(value):
+                                        row[key] = ''
+                        except Exception as e:
+                            messages.error(request, f'Error reading Excel file: {str(e)}')
+                            return render(request, 'billing/pif_scan_csv_import.html', {'form': form})
                     else:
-                        # Create new
-                        scan_result = PIFScanResult.objects.create(
-                            scan_batch=batch,
-                            container_dir=row.get('container_dir', ''),
-                            folder_kind=row.get('folder_kind', ''),
-                            pif_file=row.get('pif_file', ''),
-                            files_count=int(row.get('files_count', 0)) if row.get('files_count') else None,
-                            rows=int(row.get('rows', 0)) if row.get('rows') else None,
-                            status=row.get('status', 'skipped'),
-                            reason=row.get('reason', ''),
-                        )
-                        scan_result.extract_project_info_from_path()
-                        scan_result.save()
-                        
-                        # Try to automatically link to existing project
-                        scan_result.link_to_project()
-                    
-                    imported_count += 1
-                
-                # Consolidate duplicates
-                consolidated_count, deleted_count = PIFScanResult.consolidate_duplicates(batch)
-                
-                # Update batch statistics
-                batch.total_scanned = batch.scan_results.count()
-                batch.total_ingested = batch.scan_results.filter(status='ingested').count()
-                batch.total_skipped = batch.scan_results.filter(status='skipped').count()
-                batch.total_errors = batch.scan_results.filter(status='error').count()
-                batch.completed_at = timezone.now()
-                batch.save()
-                
-                if consolidated_count > 0:
-                    messages.success(request, f'Successfully imported {imported_count} scan results. Consolidated {consolidated_count} duplicate projects, removed {deleted_count} duplicate entries.')
-                else:
-                    messages.success(request, f'Successfully imported {imported_count} scan results.')
-                return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
-                
+                        # Read CSV file with encoding fallback (Bug Fix #1)
+                        import csv
+                        import io
+
+                        try:
+                            csv_content = csv_file.read().decode('utf-8')
+                        except UnicodeDecodeError:
+                            csv_file.seek(0)
+                            try:
+                                csv_content = csv_file.read().decode('latin-1')
+                            except UnicodeDecodeError:
+                                csv_file.seek(0)
+                                csv_content = csv_file.read().decode('cp1252', errors='replace')
+
+                        csv_reader = csv.DictReader(io.StringIO(csv_content))
+                        rows = list(csv_reader)
+
+                    # Validate columns (Bug Fix #2)
+                    if not rows:
+                        raise ValueError("File is empty or has no data rows")
+
+                    required_columns = {'container_dir', 'status'}
+                    csv_columns = set(rows[0].keys())
+                    missing_required = required_columns - csv_columns
+                    if missing_required:
+                        raise ValueError(f"File missing required columns: {', '.join(missing_required)}")
+
+                    imported_count = 0
+                    for row in rows:
+                        # Fix duplicate detection to search across all batches (Bug Fix #4)
+                        existing = None
+                        if update_existing:
+                            existing = PIFScanResult.objects.filter(
+                                container_dir=row.get('container_dir', '')
+                            ).order_by('-created_at').first()
+
+                        if existing and update_existing:
+                            # Update existing
+                            existing.status = row.get('status', 'skipped')
+                            existing.reason = row.get('reason', '')
+                            existing.pif_file = row.get('pif_file', '')
+                            existing.files_count = safe_int(row.get('files_count'), None)
+                            existing.rows = safe_int(row.get('rows'), None)
+                            existing.save()
+                        else:
+                            # Create new
+                            scan_result = PIFScanResult.objects.create(
+                                scan_batch=batch,
+                                container_dir=row.get('container_dir', ''),
+                                folder_kind=row.get('folder_kind', ''),
+                                pif_file=row.get('pif_file', ''),
+                                files_count=safe_int(row.get('files_count'), None),
+                                rows=safe_int(row.get('rows'), None),
+                                status=row.get('status', 'skipped'),
+                                reason=row.get('reason', ''),
+                            )
+                            scan_result.extract_project_info_from_path()
+
+                            # Check volume access if pif_file provided (Bug Fix #5)
+                            pif_file_path = row.get('pif_file', '')
+                            if pif_file_path:
+                                volume_check = check_volume_accessible(pif_file_path)
+                                if not volume_check.get('accessible'):
+                                    scan_result.status = 'error'
+                                    scan_result.reason = f"Volume access issue: {volume_check.get('error', 'File not accessible')}"
+
+                            scan_result.save()
+
+                            # Try to automatically link to existing project
+                            scan_result.link_to_project()
+
+                        imported_count += 1
+
+                    # Consolidate duplicates
+                    consolidated_count, deleted_count = PIFScanResult.consolidate_duplicates(batch)
+
+                    # Update batch statistics
+                    batch.total_scanned = batch.scan_results.count()
+                    batch.total_ingested = batch.scan_results.filter(status='ingested').count()
+                    batch.total_skipped = batch.scan_results.filter(status='skipped').count()
+                    batch.total_errors = batch.scan_results.filter(status='error').count()
+                    batch.completed_at = timezone.now()
+                    batch.save()
+
+                    if consolidated_count > 0:
+                        messages.success(request, f'Successfully imported {imported_count} scan results. Consolidated {consolidated_count} duplicate projects, removed {deleted_count} duplicate entries.')
+                    else:
+                        messages.success(request, f'Successfully imported {imported_count} scan results.')
+                    return redirect('billing:pif_scan_batch_detail', batch_id=batch.id)
+
             except Exception as e:
-                messages.error(request, f'Error importing CSV: {str(e)}')
+                messages.error(request, f'Error importing file: {str(e)}')
     else:
         form = PIFScanCSVImportForm()
-    
+
     context = {
         'form': form,
     }
-    
+
     return render(request, 'billing/pif_scan_csv_import.html', context)
 
 @staff_member_required
@@ -1301,6 +1369,128 @@ def pif_project_search(request):
         })
 
     return JsonResponse({'results': results})
+
+
+@login_required
+def upload_single_pif(request):
+    """
+    Upload a single PIF file and link it to a project.
+    Called from home dashboard.
+    """
+    if request.method == 'POST':
+        form = SinglePIFUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            pif_file = form.cleaned_data['pif_file']
+            project = form.cleaned_data.get('project')
+            create_new = form.cleaned_data.get('create_new_project')
+
+            try:
+                # Save file temporarily
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                    for chunk in pif_file.chunks():
+                        tmp_file.write(chunk)
+                    tmp_file_path = tmp_file.name
+
+                # Parse PIF file
+                try:
+                    parsed_data = parse_pif_excel(tmp_file_path, use_second_sheet_only=True)
+                finally:
+                    # Clean up temp file
+                    if os.path.exists(tmp_file_path):
+                        os.unlink(tmp_file_path)
+
+                if not parsed_data:
+                    messages.warning(request, 'Failed to parse PIF file. Creating project with placeholder values.')
+                    parsed_data = {}
+
+                # Create or use existing project
+                if create_new:
+                    # Extract project data from PIF (use placeholders if missing)
+                    project_title = parsed_data.get('project_name') or parsed_data.get('project_number') or 'Untitled Project'
+
+                    # Try to find or create client (fuzzy matching)
+                    client_name = parsed_data.get('client_name', '')
+                    client = None
+                    if client_name:
+                        client = Client.objects.filter(
+                            Q(company__icontains=client_name) | Q(name__icontains=client_name)
+                        ).first()
+
+                    if not client:
+                        # Create placeholder client
+                        client = Client.objects.create(
+                            name=client_name or 'Unknown Client',
+                            company=client_name or 'Unknown Company',
+                            email=parsed_data.get('billing_contact_email', ''),
+                            phone=parsed_data.get('phone', ''),
+                        )
+                        messages.info(request, f'Created new client: {client.company}')
+
+                    # Create project
+                    from datetime import date
+                    project = Project.objects.create(
+                        title=project_title,
+                        client=client,
+                        description=parsed_data.get('additional_comments', ''),
+                        start_date=parsed_data.get('project_start_date') or date.today(),
+                        budget=parsed_data.get('fee_contract_amount'),
+                        status='planning'
+                    )
+                    messages.success(request, f'Created new project: {project.title}')
+
+                # Create or update ProjectInformationForm
+                pif, created = ProjectInformationForm.objects.get_or_create(
+                    project=project,
+                    defaults={
+                        'project_number': parsed_data.get('project_number', ''),
+                        'project_name': parsed_data.get('project_name', ''),
+                        'dlaa_office': parsed_data.get('dlaa_office', ''),
+                        'project_location_city': parsed_data.get('project_location_city', ''),
+                        'project_location_state': parsed_data.get('project_location_state', ''),
+                        'originator': parsed_data.get('originator', ''),
+                        'date_entered': parsed_data.get('date_entered'),
+                        'client_name': parsed_data.get('client_name', ''),
+                        'billing_contact': parsed_data.get('billing_contact', ''),
+                        'billing_contact_email': parsed_data.get('billing_contact_email', ''),
+                        'client_project_name': parsed_data.get('client_project_name', ''),
+                        'purchase_order_number': parsed_data.get('purchase_order_number', ''),
+                        'phone': parsed_data.get('phone', ''),
+                        'secondary_contact': parsed_data.get('secondary_contact', ''),
+                        'secondary_contact_email': parsed_data.get('secondary_contact_email', ''),
+                        'project_manager': parsed_data.get('project_manager', ''),
+                        'project_start_date': parsed_data.get('project_start_date'),
+                        'fee_contract_amount': parsed_data.get('fee_contract_amount'),
+                        'type_of_contract': parsed_data.get('type_of_contract', ''),
+                        'expenses': parsed_data.get('expenses'),
+                        'special_negotiated_rates': parsed_data.get('special_negotiated_rates', ''),
+                        'special_invoice_instructions': parsed_data.get('special_invoice_instructions', ''),
+                        'retainer_received': parsed_data.get('retainer_received', ''),
+                        'additional_comments': parsed_data.get('additional_comments', ''),
+                    }
+                )
+
+                if not created:
+                    # Update existing PIF with new data (only non-empty fields)
+                    for field, value in parsed_data.items():
+                        if hasattr(pif, field) and value:
+                            setattr(pif, field, value)
+                    pif.save()
+                    messages.info(request, 'Updated existing PIF with new data from uploaded file.')
+                else:
+                    messages.success(request, 'Created new Project Information Form from uploaded file.')
+
+                # Redirect to PIF edit page
+                return redirect('billing:pif_edit', project_id=project.id)
+
+            except Exception as e:
+                logger.error(f"Error processing PIF upload: {e}", exc_info=True)
+                messages.error(request, f'Error processing PIF file: {str(e)}')
+                return redirect('projects:home_dashboard')
+    else:
+        form = SinglePIFUploadForm()
+
+    return render(request, 'billing/upload_single_pif.html', {'form': form})
+
 
 @login_required
 @require_http_methods(["GET"])
@@ -1453,3 +1643,205 @@ def update_project_completion(request, project_id):
         'success': True,
         'message': f'Updated {updated_count} phase(s) successfully'
     })
+
+
+# PIF Generator Views
+
+@login_required
+def pif_generate_upload(request):
+    """
+    Step 1: Upload proposal file and extract PIF fields
+    """
+    from .forms import PIFGeneratorUploadForm
+    from .utils.pif_generator import PIFGenerator
+
+    if request.method == 'POST':
+        form = PIFGeneratorUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Save uploaded file to temp location
+            proposal_file = request.FILES['proposal_file']
+            temp_path = os.path.join(tempfile.gettempdir(), proposal_file.name)
+
+            try:
+                with open(temp_path, 'wb') as f:
+                    for chunk in proposal_file.chunks():
+                        f.write(chunk)
+
+                logger.info(f"Saved proposal file to {temp_path}")
+
+                # Extract fields using PIFGenerator
+                generator = PIFGenerator(temp_path)
+                extracted_data, confidence_scores = generator.extract_from_proposal()
+
+                # Store in session
+                request.session['pif_generator_temp_file'] = temp_path
+                request.session['pif_generator_extracted_data'] = extracted_data
+                request.session['pif_generator_confidence_scores'] = confidence_scores
+                request.session['pif_generator_linked_project'] = form.cleaned_data.get('project').id if form.cleaned_data.get('project') else None
+
+                # Count extracted fields
+                extracted_count = len([c for c in confidence_scores.values() if c > 0])
+                high_confidence_count = len([c for c in confidence_scores.values() if c >= 0.7])
+
+                messages.success(request, f"Extracted {extracted_count} fields from proposal ({high_confidence_count} with high confidence)")
+                return redirect('billing:pif_generate_review')
+
+            except Exception as e:
+                logger.error(f"Error processing proposal file: {e}", exc_info=True)
+                messages.error(request, f"Error processing proposal file: {str(e)}")
+                # Clean up temp file if it exists
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+    else:
+        form = PIFGeneratorUploadForm()
+
+    return render(request, 'billing/pif_generate_upload.html', {'form': form})
+
+
+@login_required
+def pif_generate_review(request):
+    """
+    Step 2: Review and edit extracted PIF fields
+    """
+    from .forms import PIFGeneratorReviewForm
+
+    # Load from session
+    extracted_data = request.session.get('pif_generator_extracted_data', {})
+    confidence_scores = request.session.get('pif_generator_confidence_scores', {})
+
+    if not extracted_data:
+        messages.warning(request, "No extracted data found. Please upload a proposal file first.")
+        return redirect('billing:pif_generate_upload')
+
+    if request.method == 'POST':
+        form = PIFGeneratorReviewForm(request.POST)
+        if form.is_valid():
+            # Save reviewed data to session
+            request.session['pif_generator_reviewed_data'] = form.cleaned_data
+            return redirect('billing:pif_generate_confirm')
+    else:
+        form = PIFGeneratorReviewForm(
+            extracted_data=extracted_data,
+            confidence_scores=confidence_scores
+        )
+
+    # Calculate stats for sidebar
+    total_fields = 26
+    filled_fields = len([v for v in extracted_data.values() if v])
+    low_confidence_count = len([c for c in confidence_scores.values() if c < 0.4])
+    medium_confidence_count = len([c for c in confidence_scores.values() if 0.4 <= c < 0.7])
+    high_confidence_count = len([c for c in confidence_scores.values() if c >= 0.7])
+    completion_pct = int((filled_fields / total_fields) * 100) if total_fields > 0 else 0
+
+    context = {
+        'form': form,
+        'stats': {
+            'completion_pct': completion_pct,
+            'filled_fields': filled_fields,
+            'total_fields': total_fields,
+            'low_confidence_count': low_confidence_count,
+            'medium_confidence_count': medium_confidence_count,
+            'high_confidence_count': high_confidence_count,
+        }
+    }
+    return render(request, 'billing/pif_generate_review.html', context)
+
+
+@login_required
+@transaction.atomic
+def pif_generate_confirm(request):
+    """
+    Step 3: Generate Excel file and create database records
+    """
+    from .utils.pif_generator import PIFGenerator
+    from django.conf import settings
+
+    if request.method != 'POST':
+        messages.warning(request, "Invalid request method")
+        return redirect('billing:pif_generate_upload')
+
+    # Load from session
+    temp_file = request.session.get('pif_generator_temp_file')
+    reviewed_data = request.session.get('pif_generator_reviewed_data', {})
+    linked_project_id = request.session.get('pif_generator_linked_project')
+
+    if not temp_file or not reviewed_data:
+        messages.error(request, "Session data missing. Please start over.")
+        return redirect('billing:pif_generate_upload')
+
+    try:
+        # Generate Excel
+        generator = PIFGenerator(temp_file)
+        project_number = reviewed_data.get('project_number', 'GENERATED')
+        output_filename = f"PIF_{project_number}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        output_dir = os.path.join(settings.MEDIA_ROOT, 'pif_generated')
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, output_filename)
+
+        generator.generate_excel(output_path, overrides=reviewed_data)
+        logger.info(f"Generated PIF Excel: {output_path}")
+
+        # Validate with parser
+        validation_report = generator.validate_extraction(output_path)
+        if not validation_report['success']:
+            logger.warning(f"Validation warning: {validation_report['message']}")
+            messages.warning(request, f"Validation warning: {validation_report['message']}")
+
+        # Create/link Project
+        if linked_project_id:
+            project = Project.objects.get(id=linked_project_id)
+            logger.info(f"Linked to existing project: {project.id}")
+        else:
+            # Create new project
+            project = Project.objects.create(
+                title=reviewed_data.get('project_name', 'Untitled'),
+                project_number=reviewed_data.get('project_number'),
+                start_date=reviewed_data.get('project_start_date') or timezone.now().date(),
+                budget=reviewed_data.get('fee_contract_amount'),
+            )
+            logger.info(f"Created new project: {project.id}")
+
+        # Prepare PIF data (filter out None/empty values and convert to model-compatible format)
+        pif_data = {}
+        for field in ProjectInformationForm._meta.get_fields():
+            if field.name == 'project' or not field.editable:
+                continue
+            value = reviewed_data.get(field.name)
+            if value is not None and value != '':
+                pif_data[field.name] = value
+
+        # Create ProjectInformationForm record
+        pif, created = ProjectInformationForm.objects.update_or_create(
+            project=project,
+            defaults=pif_data
+        )
+
+        if created:
+            logger.info(f"Created new PIF for project {project.id}")
+        else:
+            logger.info(f"Updated existing PIF for project {project.id}")
+
+        # Create BillingPhase records if extracted
+        # (Note: billing phases are stored in generator.billing_phases from extraction step)
+        # For now, we'll skip this since phases aren't in reviewed_data
+        # This can be added in a future enhancement
+
+        # Clean up session
+        for key in ['pif_generator_temp_file', 'pif_generator_extracted_data',
+                    'pif_generator_confidence_scores', 'pif_generator_reviewed_data',
+                    'pif_generator_linked_project']:
+            if key in request.session:
+                del request.session[key]
+
+        # Clean up temp file
+        if temp_file and os.path.exists(temp_file):
+            os.remove(temp_file)
+            logger.info(f"Cleaned up temp file: {temp_file}")
+
+        messages.success(request, f"PIF generated and saved: {output_filename}")
+        return redirect('billing:pif_edit', project_id=project.id)
+
+    except Exception as e:
+        logger.error(f"Error generating PIF: {e}", exc_info=True)
+        messages.error(request, f"Error generating PIF: {str(e)}")
+        return redirect('billing:pif_generate_review')

@@ -1,0 +1,114 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Generate PIF from Proposal - Consulting Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Generate PIF from Proposal</h5>
+                    <p class="text-muted mb-0">Upload a proposal document and automatically extract PIF fields</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <label for="{{ form.proposal_file.id_for_label }}" class="form-label fw-bold">
+                                Proposal File <span class="text-danger">*</span>
+                            </label>
+                            <input type="file"
+                                   class="form-control {% if form.proposal_file.errors %}is-invalid{% endif %}"
+                                   id="{{ form.proposal_file.id_for_label }}"
+                                   name="{{ form.proposal_file.name }}"
+                                   accept=".doc,.docx,.txt"
+                                   required>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> {{ form.proposal_file.help_text }}
+                            </div>
+                            {% if form.proposal_file.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.proposal_file.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.project.id_for_label }}" class="form-label">
+                                Link to Existing Project
+                            </label>
+                            <select class="form-select {% if form.project.errors %}is-invalid{% endif %}"
+                                    id="{{ form.project.id_for_label }}"
+                                    name="{{ form.project.name }}">
+                                <option value="">--- Create New Project ---</option>
+                                {% for project in form.project.field.queryset %}
+                                <option value="{{ project.id }}" {% if form.project.value == project.id %}selected{% endif %}>
+                                    {{ project.project_number }} - {{ project.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> {{ form.project.help_text }}
+                            </div>
+                            {% if form.project.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.project.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading"><i class="bi bi-lightbulb"></i> How it works</h6>
+                            <ol class="mb-0">
+                                <li>Upload your proposal document (.doc, .docx, or .txt)</li>
+                                <li>Our system extracts PIF fields using AI pattern matching</li>
+                                <li>Review and edit the extracted data (color-coded by confidence)</li>
+                                <li>Generate a properly formatted PIF Excel file</li>
+                            </ol>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'projects:home-dashboard' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-cloud-upload"></i> Upload & Extract
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0"><i class="bi bi-info-circle"></i> Tips for Best Results</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Use standard proposal templates:</strong> The more structured your proposal, the better the extraction</li>
+                        <li><strong>Include key sections:</strong> Ensure your proposal has clear sections for client info, project details, and fees</li>
+                        <li><strong>Project numbers:</strong> Format project numbers as "24-001" or "P24-001" for best detection</li>
+                        <li><strong>Dollar amounts:</strong> Use phrases like "lump sum fee of $50,000" for accurate extraction</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,93 +1,104 @@
+import re
 from rest_framework import serializers
 from projects.models import Project
+from clients.models import Client
+from files.models import File, Proposal
 
-class TimelineTransformer:
-    """Transform Django project data to unified_visualizer format"""
-    
-    def __init__(self, project):
-        self.project = project
-    
-    def generate_events(self):
-        """Generate timeline events from project data"""
-        events = []
-        
-        # File scan events from project metadata
-        events.extend(self._create_file_scan_events())
-        
-        # Milestone events from project timeline
-        events.extend(self._create_milestone_events())
-        
-        return events
-    
-    def _create_file_scan_events(self):
-        """Convert project files to file scan events"""
-        if not hasattr(self.project, 'metadata') or not self.project.metadata.exists():
-            return []
-            
-        metadata = self.project.metadata.first()
-        return [{
-            "event_id": f"file_scan_{self.project.id}",
-            "event_type": "file_scan", 
-            "timestamp": int(metadata.last_analyzed.timestamp()),
-            "metadata": {
-                "file_count": self.project.files.count(),
-                "tree_structure": self._build_file_tree()
-            }
-        }]
-    
-    def _create_milestone_events(self):
-        """Convert project milestones to timeline events"""
-        milestones = []
-        
-        # Project start milestone
-        milestones.append({
-            "event_id": f"milestone_start_{self.project.id}",
-            "event_type": "milestone",
-            "timestamp": int(self.project.start_date.timestamp()),
-            "metadata": {
-                "title": f"Start: {self.project.title}",
-                "category": "project_start",
-                "priority": "high",
-                "confidence": 1.0,
-                "intended_color": "#3B82F6",
-                "actual_color": "#10B981"
-            }
-        })
-        
-        return milestones
-    
-    def _build_file_tree(self):
-        """Build file tree structure for sunburst visualization"""
-        return {
-            "name": self.project.title,
-            "type": "folder",
-            "children": [
-                {
-                    "name": f.title,
-                    "type": "file", 
-                    "size": getattr(f.file_file, 'size', 1000),
-                    "mime_type": self._guess_mime_type(f.title)
-                }
-                for f in self.project.files.all()
-            ]
-        }
 
-class ProjectTimelineSerializer(serializers.ModelSerializer):
-    timeline_data = serializers.SerializerMethodField()
-    
+class ProjectSerializer(serializers.ModelSerializer):
+    client_name = serializers.CharField(source='client.name', read_only=True)
+
     class Meta:
         model = Project
-        fields = ['id', 'title', 'timeline_data']
-    
-    def get_timeline_data(self, obj):
-        transformer = TimelineTransformer(obj)
-        events = transformer.generate_events()
-        
-        return {
-            "events": events,
-            "correlations": self._generate_correlations(events),
-            "metadata": {
-                "project_id": obj.id,
-                "generation_time": int(timezone.now().timestamp())
-            }
-        }
+        fields = [
+            'id', 'title', 'client_name', 'status', 'budget',
+            'description', 'start_date', 'end_date',
+        ]
+
+
+class FileSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(source='uploaded_at')
+
+    class Meta:
+        model = File
+        fields = ['id', 'title', 'file_type', 'url', 'created_at']
+
+    def get_url(self, obj):
+        return obj.file.url if obj.file else None
+
+
+class ProposalSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Proposal
+        fields = ['id', 'title', 'status', 'amount']
+
+    def get_title(self, obj):
+        if obj.recipient_company:
+            return f"{obj.recipient_company} Proposal"
+        return f"Proposal {obj.id}"
+
+    def get_amount(self, obj):
+        compensation = obj.compensation
+        if not isinstance(compensation, dict):
+            return None
+        for key in ('total', 'amount', 'fee'):
+            value = compensation.get(key)
+            if value is not None:
+                try:
+                    return str(value)
+                except (TypeError, ValueError):
+                    continue
+        return None
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    contact_name = serializers.CharField(source='billing_contact', read_only=True)
+
+    class Meta:
+        model = Client
+        fields = ['id', 'name', 'contact_name', 'email', 'phone', 'address']
+
+
+# ---------------------------------------------------------------------------
+# Standards extraction helper
+# ---------------------------------------------------------------------------
+
+_STANDARDS_PATTERN = re.compile(
+    r'\b(ASTM\s+\w[\w-]+)'
+    r'|(ISO\s+\d[\d\-\.]+)'
+    r'|(ANSI\s+\w[\w\.\-]+)'
+    r'|(IEC\s+\d[\d\-]+)',
+    re.IGNORECASE
+)
+
+_PREFIX_MAP = {
+    'astm': 'ASTM',
+    'iso': 'ISO',
+    'ansi': 'ANSI',
+    'iec': 'IEC',
+}
+
+
+def extract_standards_from_text(text):
+    """
+    Parse free text and return a list of standard references.
+    Example: [{'type': 'ASTM', 'id': 'ASTM E336-17a'}, ...]
+    Deduplicates by uppercased full reference string.
+    """
+    seen = set()
+    results = []
+    for match in _STANDARDS_PATTERN.finditer(text):
+        full_ref = match.group(0).strip()
+        full_ref = re.sub(r'\s+', ' ', full_ref)
+        key = full_ref.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        prefix = full_ref.split()[0].lower()
+        std_type = _PREFIX_MAP.get(prefix, full_ref.split()[0].upper())
+        results.append({'type': std_type, 'id': full_ref})
+    return results
